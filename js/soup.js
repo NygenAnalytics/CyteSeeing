@@ -178,7 +178,9 @@ G.scenes.soup = {
       T('SOUP SHARE TO REMOVE', 14, 136, focus === 'slider' ? C.white : C.mist);
       rho = G.slider('rho', 14, 152, 190, rho, 0, 40, 1, { focus: focus === 'slider', c: C.mint });
       T(rho + '%', 246, 147, C.mint, { a: 'right', f: 'lg' });
-      T('ARROWS PICK A SQUARE. SPACE USES ITS ESTIMATE.', 14, 166, C.steel);
+      /* take the estimate from the square under the cursor */
+      const p = probe(cur.r, cur.c);
+      if (G.button('use', 14, 163, 150, 13, 'USE THIS PROBE: ' + Math.min(999, Math.round(p.est)) + '%', { disabled: !p.use, focus: focus === 'grid' })) useEstimate();
       if (G.button('fix', 256, 134, 58, 28, 'CORRECT', { primary: true, focus: focus === 'slider' })) correct();
     } else {
       const msg = res.stars === 3 ? 'The ghosts are gone and the quiet real signal survived. Soup removed.'

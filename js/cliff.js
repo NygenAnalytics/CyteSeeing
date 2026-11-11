@@ -180,7 +180,7 @@ function goTest() {
 function runTest() {
   const lower = LOWERS[li], list = actors.filter(o => o.umi > lower && o.umi < KNEE);
   actors.forEach(o => { o.seen = false; o.called = o.umi >= KNEE; });
-  phase = 'scan'; scan = { list, i: 0, t: 0, per: G.reduced ? 0.004 : Math.max(0.018, Math.min(0.07, 3.4 / Math.max(1, list.length))) };
+  phase = 'scan'; scan = { list, i: 0, t: 0, since: 0, per: G.reduced ? 0.004 : Math.max(0.018, Math.min(0.07, 3.4 / Math.max(1, list.length))) };
   G.sfx('ok');
 }
 function endScan() {
@@ -194,7 +194,7 @@ function endScan() {
 }
 function keep() {
   const s = G.state;
-  s.calls = { called: stats.called, recall: stats.recall, empties: stats.empties, doublets: laneDbl };
+  s.calls = { called: stats.called, recall: stats.recall, empties: stats.empties, doublets: laneDbl, lower: LOWERS[li], fdr: FDRS[fi] };
   s.rooms.cliff = { done: true, stars: Math.max(s.rooms.cliff.stars, stats.stars) };
   G.save();
   G.go('corridor', { from: 'cliff', toast: G.fmt(stats.called) + ' CELLS CALLED' });
@@ -244,7 +244,8 @@ G.scenes.cliff = {
       if (G.hit('a')) runTest();
     } else if (phase === 'scan') {
       scan.t += dt;
-      if (G.hit('a') && pt > 0.3) scan.i = scan.list.length;
+      if (G.skip() && scan.since > 0.3) scan.i = scan.list.length;
+      scan.since += dt;
       while (scan.t >= scan.per && scan.i < scan.list.length) {
         scan.t -= scan.per;
         const o = scan.list[scan.i++];
@@ -262,9 +263,7 @@ G.scenes.cliff = {
     R(0, 0, VW, VH, '#0b1122');
     drawPlot();
     drawSide();
-    R(0, 0, VW, 11, 'rgba(8,12,26,.9)');
-    T('1-2  THE CLIFF', 5, 1, C.lilac);
-    if (phase !== 'scan') T('ESC: LEAVE', VW - 5, 1, C.steel, { a: 'right' });
+    G.roomHeader('1-2  THE CLIFF', C.lilac, phase !== 'scan');
     drawStrip();
   },
 };
@@ -401,7 +400,7 @@ function drawStrip() {
   if (phase === 'cutres' && beats) { beats.draw(); return; }
   R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.slate);
   if (phase === 'cut') {
-    T('DRAG THE LINE, OR USE THE ARROW KEYS.', 10, y0 + 8, C.fog);
+    T(G.kt('DRAG THE LINE, OR USE THE ARROW KEYS.', 'DRAG THE LINE ACROSS THE PLOT.'), 10, y0 + 8, C.fog);
     T('LEFT OF THE LINE COUNTS AS A CELL. THEN CALL THE CELLS.', 10, y0 + 19, C.mist);
     T('GOAL', 10, y0 + 34, C.amber, { f: 'smb' });
     T('KEEP 97% OF REAL CELLS.  1% EMPTIES AT MOST.', 44, y0 + 34, C.amber);
@@ -420,7 +419,7 @@ function drawStrip() {
   } else if (phase === 'scan') {
     T('TESTING BARCODE ' + Math.min(scan.i + 1, scan.list.length) + ' OF ' + scan.list.length, 14, y0 + 8, C.white, { f: 'smb' });
     R(14, y0 + 22, 240, 6, C.slate); R(14, y0 + 22, Math.round(240 * scan.i / Math.max(1, scan.list.length)), 6, C.lilac);
-    T('SPACE: SKIP', 306, y0 + 36, C.steel, { a: 'right' });
+    T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, y0 + 36, C.steel, { a: 'right' });
   } else if (phase === 'result') {
     const s = stats;
     let msg;

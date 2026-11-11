@@ -35,7 +35,7 @@ function record() {
 }
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · The last door', room: 'Reviewer 2',
+    floor: 'Ground floor · The last door', room: 'Reviewer 2', methods: true,
     goals: [{ id: 'three', text: 'Answer at least 3 of the 5 questions' }, { id: 'five', text: 'Answer all 5 for a clean accept' }],
     notes: [
       { id: 'r-hint', open: true, html: 'Everything Reviewer 2 asks was answered in a room on this floor. The right answer is the reasoning, not the number.' },
@@ -70,7 +70,7 @@ function restart() { qi = 0; sel = 0; pick = -1; right = 0; hearts = 3; phase = 
 function leave() {
   const s = G.state;
   if (verdict && verdict.stars) { s.rooms.review = { done: true, stars: Math.max(s.rooms.review.stars, verdict.stars) }; G.save(); }
-  G.go('corridor', { from: 'rev2', toast: verdict && verdict.stars ? 'GROUND FLOOR COMPLETE: ' + verdict.title : null });
+  G.go('corridor', { from: 'rev2', toast: verdict && verdict.stars ? 'GROUND FLOOR COMPLETE: ' + verdict.title : null, party: !!(verdict && verdict.stars) });
 }
 
 G.scenes.review = {

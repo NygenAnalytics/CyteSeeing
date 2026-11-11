@@ -148,7 +148,7 @@ const FLOORS = [
   ['G', 'CORE FACILITY', 'droplets to QC'],
 ];
 
-let hero = { x: 24, dir: 1, walking: false }, cam = 0, talk = null, talkAfter = null, auto = null, dir = false, near = null, fig = null;
+let hero = { x: 24, dir: 1, walking: false }, cam = 0, talk = null, talkAfter = null, auto = null, dir = false, near = null, fig = null, goal = null, runT = 0, party = -99;
 const pokes = {}, fx = {};
 const robot = { x: 420, dir: 1, wait: 0 };
 const since = id => (fx[id] === undefined ? 99 : G.t - fx[id]);
@@ -159,7 +159,7 @@ function showBook() {
   const todo = [['droplets', '1-1 Droplet bay: load the chip'], ['cliff', '1-2 The Cliff: call the cells'], ['qc', '1-3 QC gate: filter damaged cells'],
     ['soup', '1-4 Soup kitchen: remove stray RNA'], ['doublet', '1-5 Doublet hunt: find the doublets'], ['review', 'Face Reviewer 2']];
   G.book.show({
-    floor: 'Ground floor · Core facility', room: 'The corridor',
+    floor: 'Ground floor · Core facility', room: 'The corridor', methods: true,
     goals: todo.map(r => ({ id: r[0], text: r[1] + st(s.rooms[r[0]]) })).concat([
       { id: 'e', text: 'Poke around: ' + eggCount() + ' of ' + EGGS.length + ' things found' }]),
     notes: [
@@ -205,9 +205,9 @@ function interact(it) {
 
 G.scenes.corridor = {
   /* test hooks: jump to an x, or open a figure */
-  dbg: { at: x => { hero.x = x; cam = G.clamp(x - 150, 0, W - VW); }, fig: id => { fig = { id, t: 1 }; }, clear: () => { talk = null; fig = null; dir = false; }, items: () => ITEMS.map(i => [i.id, Math.round(i.x)]) },
+  dbg: { at: x => { hero.x = x; cam = G.clamp(x - 150, 0, W - VW); }, fig: id => { fig = { id, t: 1 }; }, clear: () => { talk = null; fig = null; dir = false; goal = null; }, cam: () => cam, heroX: () => hero.x, busy: () => !!(talk || fig || dir || auto), items: () => ITEMS.map(i => [i.id, Math.round(i.x)]) },
   enter(a) {
-    talk = null; dir = false; auto = null; near = null; fig = null;
+    talk = null; dir = false; auto = null; near = null; fig = null; goal = null; runT = 0;
     const from = a.from && ITEMS.find(i => i.id === a.from);
     if (from) { hero.x = from.x; hero.dir = 1; }
     else if (!G.state.met) { hero.x = -8; hero.dir = 1; auto = { to: 128, then: () => { say(LINES.intro, () => { G.state.met = true; G.save(); }); } }; }
@@ -215,6 +215,7 @@ G.scenes.corridor = {
     cam = G.clamp(hero.x - 150, 0, W - VW);
     showBook();
     if (a.toast) G.toast(a.toast, 4);
+    if (a.party) party = G.t;
   },
   update(dt) {
     hero.walking = false;
@@ -243,23 +244,35 @@ G.scenes.corridor = {
       if (hero.x >= auto.to) { const f = auto.then; auto = null; f(); }
     } else {
       let mv = (G.down.right ? 1 : 0) - (G.down.left ? 1 : 0);
-      /* a tap or click on the floor walks towards it */
-      if (!mv && G.ptr.down && G.ptr.y > 40 && !G.uiBusy()) {
+      if (mv) goal = null;
+      /* a tap or click sets somewhere to walk to. On a thing, the player walks over and pokes it. */
+      if (G.ptr.pressed && G.ptr.y > 13 && !G.uiBusy()) {
         const wx = G.ptr.x + cam;
-        if (Math.abs(wx - hero.x) > 6) mv = wx > hero.x ? 1 : -1;
+        let it = null, best = 24;
+        ITEMS.forEach(i => { const d = Math.abs(i.x - wx), band = i.floor ? G.ptr.y > WALL + 18 : G.ptr.y < WALL + 4; if (band && d < best) { best = d; it = i; } });
+        goal = { x: it ? it.x : G.clamp(wx, 12, W - 14), it };
+      }
+      if (goal && !mv) {
+        if (goal.it) goal.x = goal.it.x;                                        /* the robot moves */
+        else if (G.ptr.down) goal.x = G.clamp(G.ptr.x + cam, 12, W - 14);      /* a held finger keeps leading */
+        const dx = goal.x - hero.x;
+        if (Math.abs(dx) > 3) mv = dx > 0 ? 1 : -1;
+        else { const it = goal.it; if (it || !G.ptr.down) goal = null; if (it) interact(it); }
       }
       if (mv) {
-        hero.x = G.clamp(hero.x + mv * SPEED * dt, 12, W - 14); hero.dir = mv; hero.walking = true;
+        /* a long walk breaks into a jog */
+        runT += dt;
+        const v = SPEED + Math.min(70, Math.max(0, runT - 0.8) * 110);
+        hero.x = G.clamp(hero.x + mv * v * dt, 12, W - 14); hero.dir = mv; hero.walking = true;
         if (Math.floor(G.t * 9) % 4 === 0 && Math.floor((G.t - dt) * 9) % 4 !== 0) G.sfx('step');
-      }
+      } else runT = 0;
     }
     cam += (G.clamp(hero.x - 150, 0, W - VW) - cam) * Math.min(1, dt * 8);
 
     near = null; let best = 20;
     ITEMS.forEach(it => { const d = Math.abs(it.x - hero.x) + (it.floor ? 4 : 0); if (d < best) { best = d; near = it; } });
-    if (near && !auto) {
-      const tapped = G.ptr.pressed && Math.abs(G.ptr.x + cam - near.x) < 22 && (near.floor ? G.ptr.y > WALL + 20 : G.ptr.y < WALL + 6);
-      if (G.hit('a') || G.hit('up') || tapped) interact(near);
+    if (near && !auto && !talk && !fig && !dir) {
+      if (G.hit('a') || G.hit('up')) { goal = null; interact(near); }
     }
   },
   draw() {
@@ -272,6 +285,13 @@ G.scenes.corridor = {
     /* header */
     R(0, 0, VW, 11, 'rgba(8,12,26,.85)');
     T('G  CORE FACILITY', 5, 1, C.fog);
+    /* a strip map of the corridor: the doors, and you */
+    R(0, 11, VW, 2, '#0c1329');
+    ITEMS.forEach(i => {
+      if (i.kind === 'door') R(Math.round(i.x * VW / W) - 1, 11, 3, 2, isLocked(i) ? C.slate : i.col);
+      else if (i.id === 'rev2') R(Math.round(i.x * VW / W) - 1, 11, 3, 2, roomsDone() === ROOMS.length ? C.coral : '#5a1f2a');
+    });
+    R(Math.round(hero.x * VW / W) - 1, 10, 2, 4, C.white);
     G.star(VW - 44, 2, true);
     T(G.totalStars() + '/' + G.MAX_STARS, VW - 5, 1, C.amber, { a: 'right' });
 
@@ -536,6 +556,12 @@ function drawItem(it, x) {
 
 /* things in front of the player: the shower's water and the robot */
 function drawFront(cx) {
+  /* the floor is finished: it rains cells for a moment */
+  const pa = G.t - party;
+  if (pa < 6 && !G.reduced) {
+    const rnd = G.rng(77);
+    for (let i = 0; i < 46; i++) { const x = rnd() * VW, v = 30 + rnd() * 50, y = (pa * v + rnd() * 200) % 210 - 20; if (pa < 5 || y > pa * 40 - 200) G.cell(x, y, G.TYPES[i % 5], 4 + (i % 3)); }
+  }
   const t = G.t, sh = ITEMS.find(i => i.id === 'shower').x - cx;
   if (since('shower') < 2.2 && sh > -30 && sh < VW + 30) {
     for (let i = 0; i < 7; i++) for (let k = 0; k < 6; k++) R(sh - 6 + i * 2, 51 + ((t * 190 + i * 37 + k * 19) % 92), 1, 5, 'rgba(140,210,255,.75)');
@@ -556,7 +582,7 @@ function drawDirectory() {
   R(0, 0, VW, VH, 'rgba(6,9,20,.8)');
   G.panel(18, 8, 284, 164, { border: C.fog, fill: C.ink });
   T('LIFT DIRECTORY', 28, 14, C.amber, { f: 'smb' });
-  T('PRESS ANY KEY', 292, 14, C.steel, { a: 'right' });
+  T(G.kt('PRESS ANY KEY', 'TAP TO CLOSE'), 292, 14, C.steel, { a: 'right' });
   R(26, 25, 268, 1, C.slate);
   FLOORS.forEach((f, i) => {
     const y = 30 + i * 12, here = f[0] === 'G';

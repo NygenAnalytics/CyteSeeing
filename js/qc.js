@@ -32,7 +32,8 @@ function build() {
   const lu = (lo, hi) => Math.exp(G.lerp(Math.log(lo), Math.log(hi), rnd()));
   /* what you did at the Cliff decides who is in the room */
   nSmall = calls ? G.clamp(Math.round(calls.recall * 176 - 150), 0, 26) : 22;
-  const nJunk = calls ? Math.min(12, Math.round(calls.empties * 200)) : 0;
+  /* a little debris gets through any cell caller; empty droplets let in at the Cliff add to it */
+  const nJunk = 6 + (calls ? Math.min(12, Math.round(calls.empties * 200)) : 0);
   const add = (kind, n, f) => { for (let i = 0; i < n; i++) { const v = f(); a.push({ kind, g: v[0], m: v[1], keep: true }); } };
   add('main', 150, () => [G.clamp(Math.exp(Math.log(1800) + 0.33 * gauss()), 750, 5200), G.clamp(3.6 + 1.3 * gauss(), 1, 7.5)]);
   add('small', nSmall, () => [lu(260, 640), G.lerp(2.2, 6, rnd())]);
@@ -61,7 +62,7 @@ function measure() {
   const small = c.small[0] ? c.small[1] / c.small[0] : null, busy = c.busy[1] / c.busy[0];
   const s = { junkOut: 1 - badIn / bad, healthy: hIn / h, small, busy, kept: Math.round((hIn + badIn) * wc), junkIn: Math.round(badIn * wc), removed: Math.round((actors.length - hIn - badIn) * wc) };
   const pop = Math.min(small === null ? 1 : small, busy);
-  s.okA = s.junkOut >= 0.85; s.okB = s.healthy >= 0.95; s.okC = pop >= 0.8;
+  s.okA = s.junkOut >= 0.9; s.okB = s.healthy >= 0.95; s.okC = pop >= 0.8;
   s.stars = s.okA && s.okB && s.okC ? 3 : s.okA && s.healthy >= 0.9 && pop >= 0.5 ? 2 : s.okA && s.healthy >= 0.8 ? 1 : 0;
   s.lost = busy < 0.5 ? 'busy cells' : small !== null && small < 0.5 ? 'small cells' : '';
   return s;
@@ -81,7 +82,7 @@ function showBook() {
   G.book.show({
     floor: 'Ground floor · Room 1-3', room: 'The QC gate', codeFirst: true,
     goals: [
-      { id: 'junk', text: 'Remove at least 85% of the damaged cells' },
+      { id: 'junk', text: 'Remove at least 90% of the damaged cells and debris' },
       { id: 'healthy', text: 'Keep at least 95% of the healthy cells' },
       { id: 'pop', text: 'Do not lose a whole population' },
     ],
@@ -145,7 +146,7 @@ function filter() {
 function retry() { phase = 'set'; stats = null; actors.forEach(o => { o.keep = true; }); ['junk', 'healthy', 'pop'].forEach(g => G.book.goal(g, null)); }
 function keep() {
   const s = G.state;
-  s.qc = { kept: stats.kept, junkIn: stats.junkIn, lost: stats.lost, healthy: stats.healthy };
+  s.qc = { kept: stats.kept, junkIn: stats.junkIn, lost: stats.lost, healthy: stats.healthy, minG: Math.round(minG), maxM: Math.round(maxM * 10) / 10, nmad };
   s.rooms.qc = { done: true, stars: Math.max(s.rooms.qc.stars, stats.stars) };
   G.save();
   G.go('corridor', { from: 'qc', toast: G.fmt(stats.kept) + ' CELLS THROUGH THE GATE' });
@@ -255,7 +256,7 @@ function drawSide() {
     R(x + 6, y + 3, 3, 3, col); T(label, x + 12, y, C.mist);
     T(val, x + 6, y + 9, ok ? C.mint : C.coral, { f: 'smb' }); if (goal) T(goal, x + w - 6, y + 9, C.steel, { a: 'right' });
   };
-  row(17, 'DAMAGED OUT', C.coral, pc(s.junkOut), s.okA, '85%+');
+  row(17, 'DAMAGED OUT', C.coral, pc(s.junkOut), s.okA, '90%+');
   row(39, 'HEALTHY IN', C.mint, pc(s.healthy), s.okB, '95%+');
   row(61, 'SMALL CELLS', C.cyan, s.small === null ? 'NONE' : pc(s.small), s.small === null || s.small >= 0.8, s.small === null ? '' : '80%+');
   row(83, 'BUSY CELLS', C.lilac, pc(s.busy), s.busy >= 0.8, '80%+');

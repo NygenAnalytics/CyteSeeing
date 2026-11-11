@@ -25,6 +25,9 @@ book.show = function (cfg) {
   renderNotes();
   book.log();
   $('nb-src').innerHTML = SRC;
+  const meth = cfg.methods ? book.methods() : '';
+  $('nb-meth-box').hidden = !meth;
+  $('nb-meth').textContent = meth;
 
   const t = cfg.term;
   $('term-title').textContent = t ? (t.title || 'Same step, in code') : 'No code in this room';
@@ -73,6 +76,20 @@ book.log = function () {
   if (s.dbl) rows.push('Removed <b>' + G.fmt(s.dbl.removed) + '</b> flagged cells. <b>' + G.fmt(s.dbl.missed) + '</b> doublets are still in the data.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
   $('nb-log').innerHTML = rows.map(r => '<li>' + r + '</li>').join('');
+};
+
+/* a methods section, written from what the player actually did in each room */
+book.methods = function () {
+  const s = G.state, m = [];
+  if (s.load) m.push('Cells were loaded at ' + G.fmt(s.load.R) + ' per lane across ' + s.load.lanes + (s.load.lanes > 1 ? ' lanes' : ' lane') +
+    ' of a droplet chip, for an expected doublet rate of ' + (s.load.rate * 100).toFixed(1) + '%.');
+  if (s.calls) m.push('Cell-containing droplets were called with EmptyDrops' + (s.calls.lower ? ' (lower = ' + s.calls.lower + ', FDR ' + s.calls.fdr + ')' : '') +
+    ', giving ' + G.fmt(s.calls.called) + ' cells in the first lane.');
+  if (s.qc && s.qc.minG) m.push('Cells with fewer than ' + G.fmt(s.qc.minG) + ' detected genes or more than ' + s.qc.maxM + '% mitochondrial counts were removed' +
+    (s.qc.nmad ? ' (' + s.qc.nmad + ' median absolute deviations from the median)' : '') + ', leaving ' + G.fmt(s.qc.kept) + '.');
+  if (s.soup) m.push('Ambient RNA was removed with a contamination fraction of ' + (s.soup.rho / 100).toFixed(2) + '.');
+  if (s.dbl && s.dbl.thr) m.push('Doublets were called from simulated doublets at a score cut-off of ' + s.dbl.thr + ', and ' + G.fmt(s.dbl.removed) + ' cells were removed.');
+  return m.join(' ');
 };
 
 /* push G.params into every bound control and span */

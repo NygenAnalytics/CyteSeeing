@@ -56,7 +56,9 @@ body {
 .chip:focus-visible, .lang:focus-visible, .pad button:focus-visible, .p:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
 .layout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; justify-content: center; }
-.stage { display: grid; gap: 10px; justify-items: center; min-width: 0; }
+.stage { display: grid; gap: 10px; justify-items: center; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+#stage:fullscreen { background: var(--bg); align-content: center; padding: 8px; }
+#stage:fullscreen .keys { display: none; }
 .frame { background: #000; border: 2px solid var(--line); border-radius: 6px; padding: 6px; max-width: 100%; }
 #screen {
   display: block; width: 320px; max-width: 100%; height: auto; aspect-ratio: 16 / 9;
@@ -65,14 +67,35 @@ body {
 #screen:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .keys { margin: 0; color: var(--muted); text-align: center; text-wrap: balance; font-size: 13px; }
 .keys kbd { font-family: var(--mono); font-size: 11px; color: var(--fg); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; background: var(--panel); }
-.pad { display: none; gap: 10px; width: 100%; max-width: 420px; justify-content: space-between; }
-.pad div { display: flex; gap: 10px; }
-.pad button {
-  font-family: var(--display); font-size: 16px; color: var(--fg); background: var(--panel-hi);
-  border: 2px solid var(--line); border-radius: 6px; min-width: 62px; height: 52px; touch-action: none; user-select: none;
+/* touch controls: a row under the screen when the phone is upright, a thumb pad on each side when it is sideways */
+.pad, .side, .turn { display: none; }
+.pad { gap: 8px; width: 100%; max-width: 420px; grid-template-columns: 1fr 1fr .85fr .85fr 1.5fr; }
+.pad div { display: contents; }
+.pad button, .side button {
+  font-family: var(--mono); font-size: 18px; line-height: 1; color: var(--fg); background: var(--panel-hi);
+  border: 2px solid var(--line); border-radius: 8px; padding: 0; touch-action: manipulation; user-select: none; -webkit-user-select: none;
 }
-.pad .act { min-width: 110px; border-color: var(--cyan); }
-@media (hover: none), (pointer: coarse) { .pad { display: flex; } .keys { display: none; } }
+.pad button { min-width: 0; height: 52px; }
+.pad .act, .side .act { font-family: var(--display); font-size: 16px; border-color: var(--cyan); }
+.pad button:active, .side button:active { background: var(--line); }
+.turn { margin: 0; color: var(--muted); font-size: 12.5px; text-align: center; text-wrap: balance; }
+@media (hover: none), (pointer: coarse) { .pad { display: grid; } .turn { display: block; } .keys { display: none; } }
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  .wrap { padding-block: 6px 24px; gap: 8px; }
+  .bar { order: 2; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .book { max-width: none; }
+  .stage { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; }
+  .pad, .turn { display: none; }
+  .side { display: flex; flex-direction: column; gap: 8px; width: 64px; }
+  .side-l { justify-self: end; }
+  .side-r { justify-self: start; }
+  .side button { width: 64px; height: 40px; }
+  .side .big { height: 84px; }
+  .side .act { height: 64px; }
+  .stage.no-side { grid-template-columns: minmax(0, 1fr); }
+  .stage.no-side .side { display: none; }
+}
 
 .book { display: grid; gap: 14px; min-width: 0; max-width: 560px; }
 .book.code-first #card-term { order: -1; }
@@ -91,6 +114,7 @@ body {
 .notes li b, .term-intro b { color: var(--amber); font-weight: 400; }
 .log li { color: var(--muted); }
 .log li b { color: var(--cyan); font-weight: 400; }
+.meth { margin: 0 0 8px; padding: 8px 10px; background: #060914; border: 1px solid var(--line); border-radius: 3px; font-size: 13px; }
 .src { margin: 14px 0 0; color: var(--muted); font-size: 12.5px; }
 .src a { color: var(--cyan); }
 @keyframes note-in { from { background: rgba(246, 186, 76, .22); } to { background: transparent; } }
@@ -124,6 +148,11 @@ span.p { display: inline-block; height: auto; }
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   .book { max-width: none; }
+  .logo { font-size: 16px; }
+}
+/* on a phone every pixel of width goes to the screen */
+@media (max-width: 520px), (pointer: coarse) and (max-height: 520px) {
+  .frame { padding: 2px; border-width: 1px; border-radius: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .notes li.new { animation: none; } }
 </style>
@@ -133,9 +162,10 @@ span.p { display: inline-block; height: auto; }
   <header class="bar">
     <div class="brand">
       <h1 class="logo">CYTESEEING</h1>
-      <span class="tag">a single-cell analysis adventure · demo floor</span>
+      <span class="tag">a single-cell analysis adventure</span>
     </div>
     <div class="tools">
+      <button class="chip" id="btn-full" type="button" hidden>Full screen</button>
       <button class="chip" id="btn-sound" type="button" aria-pressed="false">Sound off</button>
       <button class="chip" id="btn-reset" type="button">Restart game</button>
     </div>
@@ -143,16 +173,30 @@ span.p { display: inline-block; height: auto; }
 
   <div class="layout">
     <div class="stage" id="stage">
+      <div class="side side-l" aria-label="Touch controls, left thumb">
+        <button type="button" data-key="up" aria-label="Up">&#9650;</button>
+        <button type="button" data-key="down" aria-label="Down">&#9660;</button>
+        <button type="button" class="big" data-key="left" aria-label="Walk left">&#9664;</button>
+      </div>
       <div class="frame">
-        <canvas id="screen" tabindex="0" aria-label="CyteSeeing game screen. Use the arrow keys to walk and Space to act."></canvas>
+        <canvas id="screen" tabindex="0" aria-label="CyteSeeing game screen. Use the arrow keys to walk and Space to act, or tap."></canvas>
+      </div>
+      <div class="side side-r" aria-label="Touch controls, right thumb">
+        <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
+        <button type="button" class="big" data-key="right" aria-label="Walk right">&#9654;</button>
       </div>
       <div class="pad" aria-label="Touch controls">
         <div>
-          <button type="button" data-key="left" aria-label="Left">&lt;</button>
-          <button type="button" data-key="right" aria-label="Right">&gt;</button>
+          <button type="button" data-key="left" aria-label="Walk left">&#9664;</button>
+          <button type="button" data-key="right" aria-label="Walk right">&#9654;</button>
+        </div>
+        <div>
+          <button type="button" class="sm" data-key="up" aria-label="Up">&#9650;</button>
+          <button type="button" class="sm" data-key="down" aria-label="Down">&#9660;</button>
         </div>
         <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
       </div>
+      <p class="turn">Tap things to walk to them and poke them. Turn your phone sideways for a bigger screen.</p>
       <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> walk and adjust · <kbd>Space</kbd> act · <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a control · <kbd>Esc</kbd> leave a room · <kbd>M</kbd> sound</p>
     </div>
 
@@ -166,6 +210,11 @@ span.p { display: inline-block; height: auto; }
         <ul class="notes" id="nb-notes"></ul>
         <h3 id="nb-log-h">What you carry</h3>
         <ul class="log" id="nb-log"></ul>
+        <div id="nb-meth-box" hidden>
+          <h3>Your methods section, so far</h3>
+          <p class="meth" id="nb-meth"></p>
+          <button class="chip" id="btn-copy" type="button">Copy</button>
+        </div>
         <p class="src" id="nb-src"></p>
       </section>
       <section class="card" id="card-term">

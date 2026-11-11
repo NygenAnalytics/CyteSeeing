@@ -21,6 +21,11 @@ const G = window.G = { VW, VH, cv, ctx, t: 0, scenes: {}, params: {} };
 G.NAME = 'CyteSeeing';
 G.setScale = setScale;
 G.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* true on phones and tablets: hints name taps instead of keys, and tap targets get a little slack */
+const coarse = window.matchMedia ? window.matchMedia('(hover: none), (pointer: coarse)') : null;
+G.touch = !!(coarse && coarse.matches);
+if (coarse && coarse.addEventListener) coarse.addEventListener('change', e => { G.touch = e.matches; });
+G.kt = (keys, taps) => (G.touch ? taps : keys);
 
 /* ================= palette ================= */
 const C = G.C = {
@@ -215,6 +220,7 @@ window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || isField(e.target)) return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (key === 'm') { G.toggleSound(); return; }
+  if (key === 'f' && G.toggleFull) { G.toggleFull(); return; }
   const k = KEYMAP[key];
   if (!k) return;
   e.preventDefault();
@@ -228,6 +234,11 @@ window.addEventListener('keyup', e => {
 });
 window.addEventListener('blur', () => { Object.keys(down).forEach(k => { down[k] = false; }); });
 G.hit = k => !!hit[k];
+/* press a key from code: it counts on the next frame */
+const queued = {};
+G.press = k => { queued[k] = true; };
+/* skip an animation: the action key, or a tap or click anywhere */
+G.skip = () => !!hit.a || ptr.pressed;
 /* true on the first press, then repeats while the key is held */
 G.rep = k => !!hit[k] || (down[k] && held[k] > 0.32 && held[k + '_r']);
 
@@ -238,16 +249,17 @@ function ptrPos(e) {
   ptr.y = (e.clientY - r.top) * VH / r.height;
 }
 cv.addEventListener('pointerdown', e => {
-  ptrPos(e); ptr.down = true; ptr.pressed = true;
+  ptrPos(e); ptr.down = true; ptr.pressed = true; ptr.lift = false;
+  if (e.pointerType === 'touch') G.touch = true;
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   cv.focus({ preventScroll: true });
   e.preventDefault();
 });
 cv.addEventListener('pointermove', ptrPos);
-const ptrUp = e => { ptrPos(e); if (ptr.down) ptr.released = true; ptr.down = false; };
+const ptrUp = e => { ptrPos(e); if (ptr.down) ptr.released = true; ptr.down = false; if (e.pointerType === 'touch') ptr.lift = true; };
 cv.addEventListener('pointerup', ptrUp);
 cv.addEventListener('pointercancel', ptrUp);
-G.over = (x, y, w, h) => ptr.x >= x && ptr.x < x + w && ptr.y >= y && ptr.y < y + h;
+G.over = (x, y, w, h) => { const s = G.touch ? 2 : 0; return ptr.x >= x - s && ptr.x < x + w + s && ptr.y >= y - s && ptr.y < y + h + s; };
 
 /* on-screen pad, for phones */
 document.querySelectorAll('[data-key]').forEach(b => {
@@ -304,7 +316,12 @@ G.uiBusy = () => ui.active !== null;
 G.roomHeader = function (title, col, leave) {
   R(0, 0, VW, 11, 'rgba(8,12,26,.9)');
   T(title, 5, 1, col);
-  if (leave) T('ESC: LEAVE', VW - 5, 1, C.steel, { a: 'right' });
+  if (!leave) return;
+  /* the way out: Esc, or a tap or click on the label */
+  const over = G.over(VW - 64, 0, 64, 12);
+  if (G.touch) { G.panel(VW - 44, 0, 42, 11, { border: over ? C.cyan : C.steel, fill: C.night }); T('LEAVE', VW - 23, 1, C.fog, { a: 'center' }); }
+  else T('ESC: LEAVE', VW - 5, 1, over ? C.fog : C.steel, { a: 'right' });
+  if (ptr.pressed && over) G.press('b');
 };
 G.strip = function (y0) { R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.slate); };
 /* a result: two lines of text and two buttons. Returns 'retry', 'keep' or null. */
@@ -424,6 +441,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
   G.t += dt;
+  Object.keys(queued).forEach(k => { hit[k] = true; delete queued[k]; });
   ['left', 'right', 'up', 'down'].forEach(k => {
     if (down[k]) { held[k] = (held[k] || 0) + dt; held[k + '_t'] = (held[k + '_t'] || 0) + dt; held[k + '_r'] = false; if (held[k + '_t'] > 0.06) { held[k + '_t'] = 0; held[k + '_r'] = true; } }
   });
@@ -442,6 +460,8 @@ function frame(now) {
   if (fade > 0) { ctx.globalAlpha = Math.min(1, fade); R(0, 0, VW, VH, C.ink); ctx.globalAlpha = 1; }
   Object.keys(hit).forEach(k => { delete hit[k]; });
   ptr.pressed = false; ptr.released = false;
+  /* a finger that has left the screen is not hovering over anything */
+  if (ptr.lift) { ptr.lift = false; ptr.x = -1; ptr.y = -1; }
   requestAnimationFrame(frame);
 }
 G.start = function (first) {

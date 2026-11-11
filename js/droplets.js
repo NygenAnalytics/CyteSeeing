@@ -111,7 +111,7 @@ G.scenes.droplets = {
       }
     } else if (phase === 'run') {
       run.t += dt;
-      if (G.hit('a') && run.t > 0.3) run.t = run.D;
+      if (G.skip() && run.t > 0.3) run.t = run.D;
       if (run.t >= run.D) finish();
     } else if (phase === 'result') {
       const j = res.j;
@@ -123,9 +123,7 @@ G.scenes.droplets = {
     drawChip();
     drawStream();
     drawTally();
-    R(0, 0, VW, 11, 'rgba(8,12,26,.9)');
-    T('1-1  DROPLET BAY', 5, 1, C.cyan);
-    if (phase !== 'run') T('ESC: LEAVE', VW - 5, 1, C.steel, { a: 'right' });
+    G.roomHeader('1-1  DROPLET BAY', C.cyan, phase !== 'run');
 
     if (phase === 'intro') beats.draw();
     else if (phase === 'config') drawConfig();
@@ -306,7 +304,7 @@ function drawRun() {
   R(14, 136, 240, 7, C.slate); R(14, 136, Math.round(240 * f), 7, C.cyan);
   for (let i = 1; i < lanes; i++) R(14 + Math.round(240 * i / lanes), 134, 1, 11, C.ink);
   T(G.fmt(R_) + ' CELLS PER LANE', 14, 150, C.mist);
-  T('SPACE: SKIP', 306, 167, C.steel, { a: 'right' });
+  T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, 167, C.steel, { a: 'right' });
 }
 
 function drawResult() {

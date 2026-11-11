@@ -139,7 +139,7 @@ function remove() {
 function retry() { phase = 'score'; res = null; ['catch', 'spare'].forEach(g => G.book.goal(g, null)); }
 function keep() {
   const s = G.state, per = (s.load ? s.load.R : 4500) / 176;
-  s.dbl = { removed: Math.round(res.n * per), missed: Math.round(res.missed * per / 2), fp: res.fp };
+  s.dbl = { removed: Math.round(res.n * per), missed: Math.round(res.missed * per / 2), fp: res.fp, thr: thr.toFixed(2) };
   s.rooms.doublet = { done: true, stars: Math.max(s.rooms.doublet.stars, res.stars) };
   G.save();
   G.go('corridor', { from: 'doublet', toast: res.missed ? res.missed + ' DOUBLETS GOT AWAY. THEY ALWAYS DO.' : 'A CLEAN SWEEP' });
@@ -162,7 +162,7 @@ G.scenes.doublet = {
     if (G.hit('b') && phase !== 'sim') { G.go('corridor', { from: 'doublet' }); return; }
     if (phase === 'intro') { if (beats.update(dt) === 'done') { phase = 'ready'; pt = 0; } }
     else if (phase === 'ready') { if (G.hit('a')) simulate(); }
-    else if (phase === 'sim') { if (pt > 2.9 || (G.hit('a') && pt > 0.3) || G.reduced) { phase = 'score'; pt = 0; G.book.unlock('x-rate'); } }
+    else if (phase === 'sim') { if (pt > 2.9 || (G.skip() && pt > 0.3) || G.reduced) { phase = 'score'; pt = 0; G.book.unlock('x-rate'); } }
     else if (phase === 'score') {
       const step = (G.rep('right') ? 1 : 0) - (G.rep('left') ? 1 : 0);
       if (step) { thr = G.clamp(Math.round((thr + step * 0.05) * 20) / 20, 0.3, 1); G.sfx('tick'); }
@@ -189,13 +189,13 @@ G.scenes.doublet = {
       G.strip(y0);
       T('ADDING RANDOM PAIRS OF CELLS TOGETHER', 14, y0 + 8, C.white, { f: 'smb' });
       R(14, y0 + 22, 240, 6, C.slate); R(14, y0 + 22, Math.round(240 * G.clamp(pt / 2.4, 0, 1)), 6, C.pink);
-      T('SPACE: SKIP', 306, y0 + 36, C.steel, { a: 'right' });
+      T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, y0 + 36, C.steel, { a: 'right' });
     } else if (phase === 'score') {
       G.strip(y0);
       T('CUT-OFF: SHARE OF FAKE NEIGHBOURS', 14, y0 + 5, C.mist);
       thr = G.slider('thr', 14, y0 + 22, 176, thr, 0.3, 1, 0.05, { focus: true, c: C.coral });
       T(thr.toFixed(2), 240, y0 + 17, C.coral, { a: 'right', f: 'lg' });
-      T('LEFT AND RIGHT MOVE THE CUT-OFF', 14, y0 + 36, C.steel);
+      T(G.kt('LEFT AND RIGHT MOVE THE CUT-OFF', 'DRAG THE CUT-OFF, HERE OR ON THE BARS'), 14, y0 + 36, C.steel);
       if (G.button('rm', 250, y0 + 6, 64, 28, 'REMOVE', { primary: true, fill: '#b94a45', accent: C.coral, focus: true })) remove();
     } else {
       const msg = res.stars === 3 ? (res.missed ? 'Clean. The ' + res.missed + ' that got away are mostly same-type doublets. Nobody catches those.' : 'Every catchable doublet caught, and nobody innocent removed.')

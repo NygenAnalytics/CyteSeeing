@@ -15,8 +15,11 @@ It is built for people who learn by doing: students, clinicians, postdocs, and a
 | <kbd>↑</kbd> <kbd>↓</kbd> | Pick a control inside a room |
 | <kbd>Esc</kbd> | Leave a room |
 | <kbd>M</kbd> | Sound on or off (off by default) |
+| <kbd>F</kbd> | Full screen |
 
-Mouse and touch work too: click the floor to walk, click things to poke them, drag sliders and lines.
+Mouse and touch work for everything: click or tap a spot to walk there, click a thing to walk over and poke it, drag sliders and lines, and tap "Leave" to step out of a room.
+
+On a phone the game is playable with taps alone. Held upright, there is a row of buttons under the screen. Held sideways, the screen fills the height and a thumb pad sits on each side.
 
 Progress is saved in the browser. "Restart game" in the page header wipes it.
 
@@ -35,6 +38,8 @@ The ground floor, the core facility: from a tube of cells to a clean count matri
 
 Choices carry over. The load you pick in 1-1 sets how many doublets are waiting in 1-5. The cells you rescue or lose at the Cliff are the cells you filter in 1-3.
 
+As you clear rooms, the notebook writes your methods section from the settings you actually chose: loading, cell calling, filtering thresholds, contamination fraction and doublet cut-off.
+
 The corridor between the rooms has 23 things to poke. Most answer with a line or two, some move, and nine open a pixel-art figure with a caption (a UMAP, a flow cell mid-run, a cDNA trace, a volcano plot and others).
 
 Each room has a notebook with the objective and field notes, and a terminal that shows the same step in real tool syntax: Scanpy, Seurat, CyteArc, and the specialist tool for the job (DropletUtils, SoupX, CellBender, scDblFinder, Scrublet). Highlighted values in the code are live: change them in the game or in the code.
@@ -43,7 +48,7 @@ Floors 2 to 10 are planned. The lift directory in the game lists them.
 
 ## How it is put together
 
-Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. All art is drawn in code in a 320 by 180 grid, at the full resolution of the screen.
+Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. All art is drawn in code in a 320 by 180 grid, at the full resolution of the screen, so it stays sharp on phones and large monitors alike.
 
 | File | What it holds |
 | --- | --- |

@@ -4,19 +4,54 @@
 const cv = G.cv, stage = document.getElementById('stage');
 
 function fit() {
-  /* one column on narrow screens; otherwise leave the notebook at least 320px */
-  const lay = stage.parentElement.clientWidth, one = window.matchMedia('(max-width: 900px)').matches;
-  const avail = (one ? lay : lay - 18 - 320) - 16;
+  const mq = q => window.matchMedia(q).matches;
+  const touch = mq('(hover: none), (pointer: coarse)');
+  const sideways = mq('(pointer: coarse) and (orientation: landscape) and (max-height: 520px)');
+  const full = document.fullscreenElement === stage;
+  const lay = stage.parentElement.clientWidth, one = sideways || mq('(max-width: 900px)');
+  /* the room the screen may take: everything in full screen, the full height on a phone held
+     sideways, the full width on a phone held upright, and beside the notebook on a desktop */
+  const fs = getComputedStyle(cv.parentElement), edge = 2 * (parseFloat(fs.paddingLeft) + parseFloat(fs.borderLeftWidth));
+  let w, h;
+  if (full) { w = window.innerWidth - 16 - edge; h = window.innerHeight - 16 - edge; }
+  else if (sideways) { w = lay - edge; h = window.innerHeight - 6 - edge; }
+  else { w = (one ? lay : lay - 18 - 320) - edge; h = touch ? 1e6 : window.innerHeight - 120; }
   /* one game pixel covers a whole number of screen pixels, whatever the display's pixel ratio */
-  const dpr = window.devicePixelRatio || 1;
-  let k = Math.floor(avail * dpr / G.VW);
-  const tall = Math.floor((window.innerHeight - 120) * dpr / G.VH);
-  if (tall >= 1) k = Math.min(k, tall);
-  if (k >= 1) { cv.style.width = (k * G.VW / dpr) + 'px'; G.setScale(k); }
-  else { cv.style.width = '100%'; G.setScale(1); }
+  const dpr = window.devicePixelRatio || 1, room = Math.min(w, h * G.VW / G.VH);
+  const exact = room * dpr / G.VW, k = Math.floor(exact);
+  let css = k * G.VW / dpr;
+  if (k >= 1 && k / exact >= 0.8) { G.setScale(k); cv.style.imageRendering = ''; }
+  else {
+    /* a whole number would waste a fifth of the space or more: fill it instead, drawn one step
+       larger and scaled down, which costs a little sharpness */
+    css = Math.max(120, Math.floor(room)); G.setScale(Math.ceil(css * dpr / G.VW)); cv.style.imageRendering = 'auto';
+  }
+  cv.style.width = css + 'px';
+  /* thumb pads only when there is room beside the screen */
+  stage.classList.toggle('no-side', sideways && (lay - (css + edge)) / 2 < 76);
 }
 window.addEventListener('resize', fit);
+document.addEventListener('fullscreenchange', fit);
 fit();
+
+/* full screen, where the browser allows it (F toggles it too) */
+const fullBtn = document.getElementById('btn-full');
+G.toggleFull = function () {
+  try {
+    const p = document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) { /* some app views refuse; the game is fine without it */ }
+};
+if (document.fullscreenEnabled && stage.requestFullscreen) { fullBtn.hidden = false; fullBtn.addEventListener('click', G.toggleFull); }
+
+/* copy the methods section; fall back to selecting it where the clipboard is refused */
+const copyBtn = document.getElementById('btn-copy');
+copyBtn.addEventListener('click', () => {
+  const el = document.getElementById('nb-meth');
+  const done = () => { copyBtn.textContent = 'Copied'; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1800); };
+  const select = () => { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); copyBtn.textContent = 'Selected'; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1800); };
+  try { navigator.clipboard.writeText(el.textContent).then(done, select); } catch (e) { select(); }
+});
 
 document.getElementById('btn-sound').addEventListener('click', () => G.toggleSound());
 const reset = document.getElementById('btn-reset');

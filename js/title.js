@@ -89,7 +89,7 @@ G.scenes.title = {
     const label = G.hasProgress() ? 'CONTINUE' : 'START';
     if (Math.floor(G.t * 2.5) % 2 === 0) T('>', 118, 86, C.amber, { f: 'smb' });
     T(label, 128, 86, C.white, { f: 'smb' });
-    T('SPACE OR CLICK', 128, 96, C.steel);
+    T(G.kt('SPACE OR CLICK', 'TAP TO START'), 128, 96, C.steel);
     T(TAGS[Math.floor((G.t - t0) / 3.5) % TAGS.length], VW / 2, 114, C.mist, { a: 'center', sh: C.ink });
 
     /* the count matrix */
