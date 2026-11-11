@@ -6,7 +6,7 @@ It is built for people who learn by doing: students, clinicians, postdocs, and a
 
 ## Play
 
-Open `index.html` in a browser. There is nothing to install and no build step.
+**[Play it in your browser](https://docs.nygen.io/CyteSeeing/)**, or open `index.html` from a copy of this repository. There is nothing to install and no build step.
 
 | Key | Does |
 | --- | --- |
@@ -22,21 +22,28 @@ Progress is saved in the browser. "Restart game" in the page header wipes it.
 
 ## What is in it so far
 
-The ground floor, the core facility:
+The ground floor, the core facility: from a tube of cells to a clean count matrix.
 
-- **The corridor.** 23 things to poke. Most answer with a line or two, some move, and nine open a pixel-art figure with a caption (a UMAP, a flow cell mid-run, a cDNA trace, a volcano plot and others).
-- **Room 1-1, the droplet bay.** A microfluidic chip. Choose how many cells to load and across how many lanes, to get 8,000 singlets with 4% doublets or fewer.
-- **Room 1-2, the Cliff.** The barcode rank plot. First draw a UMI cut-off and find that no line works, then test each barcode against the ambient profile, the way EmptyDrops does.
+| Room | You do | You learn |
+| --- | --- | --- |
+| 1-1 Droplet bay | Choose how many cells to load, and across how many lanes | Doublets rise with every cell you load |
+| 1-2 The Cliff | Separate cells from empty droplets on the barcode rank plot | A count cut-off is not enough; test each barcode against the ambient profile |
+| 1-3 QC gate | Filter damaged cells by genes detected and mitochondrial share | Thresholds from a tutorial do not transfer; read lenient ones off the data |
+| 1-4 Soup kitchen | Measure and remove ambient RNA | Use genes a cell cannot express; too much correction erases real signal |
+| 1-5 Doublet hunt | Make artificial doublets, score the cells, pick a cut-off | Same-type doublets are invisible, and real transitions sit between clusters too |
+| Reviewer 2 | Answer five questions about what you just did | Whether any of it stuck |
 
-Choices carry over: the load you pick in 1-1 sets the data in 1-2, and the doublets you made come along as called cells.
+Choices carry over. The load you pick in 1-1 sets how many doublets are waiting in 1-5. The cells you rescue or lose at the Cliff are the cells you filter in 1-3.
 
-Each room has a notebook with the objective and field notes, and a terminal that shows the same step in real tool syntax (DropletUtils, Cell Ranger, CyteArc, Scanpy and Seurat). Highlighted values in the code are live: change them in the game or in the code.
+The corridor between the rooms has 23 things to poke. Most answer with a line or two, some move, and nine open a pixel-art figure with a caption (a UMAP, a flow cell mid-run, a cDNA trace, a volcano plot and others).
 
-Rooms 1-3 to 1-5 (quality control, ambient RNA, doublets) and floors 2 to 10 are planned. The lift directory in the game lists them.
+Each room has a notebook with the objective and field notes, and a terminal that shows the same step in real tool syntax: Scanpy, Seurat, CyteArc, and the specialist tool for the job (DropletUtils, SoupX, CellBender, scDblFinder, Scrublet). Highlighted values in the code are live: change them in the game or in the code.
+
+Floors 2 to 10 are planned. The lift directory in the game lists them.
 
 ## How it is put together
 
-Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. All art is drawn in code on a 320 by 180 canvas and scaled up by a whole number.
+Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. All art is drawn in code in a 320 by 180 grid, at the full resolution of the screen.
 
 | File | What it holds |
 | --- | --- |
@@ -46,8 +53,8 @@ Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. Al
 | `js/title.js` | Title screen |
 | `js/corridor.js` | The corridor: items, their lines, their drawings and interactions |
 | `js/figures.js` | The figures that open from props |
-| `js/droplets.js` | Room 1-1 |
-| `js/cliff.js` | Room 1-2 |
+| `js/droplets.js`, `js/cliff.js`, `js/qc.js`, `js/soup.js`, `js/doublets.js` | Rooms 1-1 to 1-5 |
+| `js/review.js` | Reviewer 2 |
 | `js/fonts.js` | The two pixel fonts, embedded |
 | `js/main.js` | Boot |
 
@@ -63,12 +70,14 @@ The rooms teach the reasoning behind each step, not exact numbers. The data is g
 
 - The doublet rate uses the common rule of thumb for a standard 10x chip: about 0.8% per 1,000 cells recovered.
 - The profile test in room 1-2 stands in for EmptyDrops. It shows what the test does and how `lower` and the FDR threshold change the outcome, without running the real statistics.
+- Room 1-4 uses one soup share for every cell. Real tools can estimate it per cluster or per cell.
+- Room 1-5 scores cells on a two-dimensional map. Real doublet callers do the same thing in a space with many more dimensions.
 
-The recommendations follow the [Single-cell best practices](https://www.sc-best-practices.org/) book, the 10x Genomics analysis guides, and EmptyDrops ([Lun et al. 2019](https://doi.org/10.1186/s13059-019-1662-y)).
+The recommendations follow the [Single-cell best practices](https://www.sc-best-practices.org/) book and the papers behind each method: EmptyDrops ([Lun et al. 2019](https://doi.org/10.1186/s13059-019-1662-y)), SoupX ([Young and Behjati 2020](https://doi.org/10.1093/gigascience/giaa151)), Scrublet ([Wolock et al. 2019](https://doi.org/10.1016/j.cels.2018.11.005)) and scDblFinder ([Germain et al. 2021](https://doi.org/10.12688/f1000research.73600.2)).
 
-## Credits
+## Credits and licence
 
-Made by [Nygen Analytics](https://www.nygen.io/).
+Made by [Nygen Analytics](https://github.com/NygenAnalytics). Released under the BSD 3-Clause licence, see `LICENSE`.
 
 The idea of a walkable pixel world with one topic per room comes from Phil Ewels's [scverse 2026 keynote](https://github.com/ewels/scverse2026-keynote). The code and art here are separate.
 

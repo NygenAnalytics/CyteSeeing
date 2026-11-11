@@ -6,12 +6,20 @@
 const VW = 320, VH = 180;
 const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
-cv.width = VW; cv.height = VH;
-ctx.imageSmoothingEnabled = false;
+/* The game is drawn in 320 x 180 units, but onto a canvas with as many real pixels as the screen
+   gives it. Blocks stay blocky and text is drawn at full resolution, so nothing is blurred by scaling. */
+function setScale(s) {
+  s = Math.max(1, Math.round(s));
+  cv.width = VW * s; cv.height = VH * s;
+  ctx.setTransform(s, 0, 0, s, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+}
+setScale(1);
 
 const G = window.G = { VW, VH, cv, ctx, t: 0, scenes: {}, params: {} };
 /* the game's name: change it here and the title screen and page header follow */
 G.NAME = 'CyteSeeing';
+G.setScale = setScale;
 G.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /* ================= palette ================= */
@@ -29,10 +37,16 @@ G.TYPES = [C.cyan, C.lilac, C.amber, C.mint, C.pink];
 const SAVE_KEY = 'cyteseeing-save-v1';
 function fresh() {
   return {
-    rooms: { droplets: { done: false, stars: 0 }, cliff: { done: false, stars: 0 } },
+    rooms: {
+      droplets: { done: false, stars: 0 }, cliff: { done: false, stars: 0 }, qc: { done: false, stars: 0 },
+      soup: { done: false, stars: 0 }, doublet: { done: false, stars: 0 }, review: { done: false, stars: 0 },
+    },
     load: null,      // what you loaded in 1-1: { R, lanes, singlets, doublets, rate }
     calls: null,     // what you called in 1-2: { called, recall, empties, doublets }
-    tries: { droplets: 0, cliff: 0 },
+    qc: null,        // what you filtered in 1-3
+    soup: null,      // what you corrected in 1-4
+    dbl: null,       // what you removed in 1-5
+    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0 },
     notes: {},       // field notes unlocked so far
     eggs: {}, met: false, sound: false,
   };
@@ -52,7 +66,8 @@ G.loadSave = function () {
 G.save = function () { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.state)); } catch (e) {} };
 G.resetSave = function () { const snd = G.state.sound; G.state = fresh(); G.state.sound = snd; G.save(); };
 G.hasProgress = () => G.state.met || G.state.rooms.droplets.done;
-G.totalStars = () => G.state.rooms.droplets.stars + G.state.rooms.cliff.stars;
+G.totalStars = () => Object.keys(G.state.rooms).reduce((n, k) => n + G.state.rooms[k].stars, 0);
+G.MAX_STARS = 18;
 
 /* ================= utils ================= */
 G.fmt = n => Math.round(n).toLocaleString('en-US');
@@ -284,6 +299,27 @@ G.slider = function (id, x, y, w, v, min, max, step, o) {
   return v;
 };
 G.uiBusy = () => ui.active !== null;
+
+/* ---------- pieces every room uses ---------- */
+G.roomHeader = function (title, col, leave) {
+  R(0, 0, VW, 11, 'rgba(8,12,26,.9)');
+  T(title, 5, 1, col);
+  if (leave) T('ESC: LEAVE', VW - 5, 1, C.steel, { a: 'right' });
+};
+G.strip = function (y0) { R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.slate); };
+/* a result: two lines of text and two buttons. Returns 'retry', 'keep' or null. */
+G.resultDraw = function (y0, msg, pass, rsel, a, b) {
+  G.strip(y0);
+  G.wrap(msg, 300, 'md').slice(0, 2).forEach((l, i) => T(l, 10, y0 + 3 + i * 11, C.paper, { f: 'md' }));
+  let act = null;
+  if (G.button('res-a', 10, y0 + 29, 104, 15, a, { focus: rsel === 0 || !pass })) act = 'retry';
+  if (pass && G.button('res-b', 176, y0 + 29, 134, 15, b, { primary: true, focus: rsel === 1 })) act = 'keep';
+  return act;
+};
+G.resultKeys = function (rsel, pass) {
+  if (G.hit('left') || G.hit('right')) { rsel = 1 - rsel; G.sfx('tick'); }
+  return { rsel, act: G.hit('a') ? (rsel === 1 && pass ? 'keep' : 'retry') : null };
+};
 
 /* ================= sound ================= */
 let ac = null;

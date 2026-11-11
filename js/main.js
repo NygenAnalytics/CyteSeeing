@@ -7,10 +7,13 @@ function fit() {
   /* one column on narrow screens; otherwise leave the notebook at least 320px */
   const lay = stage.parentElement.clientWidth, one = window.matchMedia('(max-width: 900px)').matches;
   const avail = (one ? lay : lay - 18 - 320) - 16;
-  let k = Math.floor(avail / G.VW);
-  const tall = Math.floor((window.innerHeight - 120) / G.VH);
+  /* one game pixel covers a whole number of screen pixels, whatever the display's pixel ratio */
+  const dpr = window.devicePixelRatio || 1;
+  let k = Math.floor(avail * dpr / G.VW);
+  const tall = Math.floor((window.innerHeight - 120) * dpr / G.VH);
   if (tall >= 1) k = Math.min(k, tall);
-  cv.style.width = k >= 1 ? (k * G.VW) + 'px' : '100%';
+  if (k >= 1) { cv.style.width = (k * G.VW / dpr) + 'px'; G.setScale(k); }
+  else { cv.style.width = '100%'; G.setScale(1); }
 }
 window.addEventListener('resize', fit);
 fit();

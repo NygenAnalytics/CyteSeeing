@@ -6,8 +6,8 @@
 const $ = id => document.getElementById(id);
 const book = G.book = { cfg: null, onParam: null, lang: {} };
 
-const SRC = 'Built on the <a href="https://www.sc-best-practices.org/" target="_blank" rel="noopener">Single-cell best practices</a> book, ' +
-  'the 10x Genomics analysis guides and the EmptyDrops paper (Lun et al. 2019).';
+const SRC = 'Built on the <a href="https://www.sc-best-practices.org/" target="_blank" rel="noopener">Single-cell best practices</a> book ' +
+  'and the papers behind each method.';
 
 function fmtParam(k, v) {
   if (v === undefined || v === null) return '';
@@ -67,6 +67,10 @@ book.log = function () {
     G.fmt(s.load.singlets) + '</b> singlets and <b>' + G.fmt(s.load.doublets) + '</b> doublets (' + (s.load.rate * 100).toFixed(1) + '%).');
   if (s.calls) rows.push('Called <b>' + G.fmt(s.calls.called) + '</b> cells in lane 1. Kept ' + Math.round(s.calls.recall * 100) + '% of the real cells, with ' +
     (s.calls.empties * 100).toFixed(1) + '% empty droplets, and <b>' + G.fmt(s.calls.doublets) + '</b> hidden doublets.');
+  if (s.qc) rows.push('Filtered to <b>' + G.fmt(s.qc.kept) + '</b> cells. <b>' + G.fmt(s.qc.junkIn) + '</b> damaged cells got through' +
+    (s.qc.lost ? ', and you lost most of the <b>' + s.qc.lost + '</b>.' : '.'));
+  if (s.soup) rows.push('Removed a soup share of <b>' + s.soup.rho + '%</b>. The real share was ' + s.soup.truth + '%.');
+  if (s.dbl) rows.push('Removed <b>' + G.fmt(s.dbl.removed) + '</b> flagged cells. <b>' + G.fmt(s.dbl.missed) + '</b> doublets are still in the data.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
   $('nb-log').innerHTML = rows.map(r => '<li>' + r + '</li>').join('');
 };

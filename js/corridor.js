@@ -17,18 +17,18 @@ const ITEMS = [
   { id: 'droplets', kind: 'door', x: 292, code: '1-1', name: 'DROPLET BAY', col: C.cyan },
   { id: 'scope', kind: 'prop', x: 360, label: 'LOOK', fig: 'scope' },
   { id: 'freezer', kind: 'prop', x: 428, label: 'OPEN' },
-  { id: 'cliff', kind: 'door', x: 496, code: '1-2', name: 'THE CLIFF', col: C.lilac },
+  { id: 'cliff', kind: 'door', x: 496, code: '1-2', name: 'THE CLIFF', col: C.lilac, need: 'droplets' },
   { id: 'screen', kind: 'prop', x: 556, label: 'LOOK', fig: 'matrix' },
   { id: 'seq', kind: 'prop', x: 616, label: 'LOOK', fig: 'flowcell' },
   { id: 'coffee', kind: 'prop', x: 680, label: 'POUR', stick: true },
   { id: 'student', kind: 'prop', x: 748, label: 'WAKE?' },
-  { id: 'qc', kind: 'door', x: 820, code: '1-3', name: 'QC GATE', col: C.amber, soon: true },
+  { id: 'qc', kind: 'door', x: 820, code: '1-3', name: 'QC GATE', col: C.amber, need: 'cliff' },
   { id: 'poster', kind: 'prop', x: 890, label: 'LOOK', fig: 'umap' },
   { id: 'centrifuge', kind: 'prop', x: 954, label: 'SPIN' },
-  { id: 'soup', kind: 'door', x: 1024, code: '1-4', name: 'SOUP KITCHEN', col: C.mint, soon: true },
+  { id: 'soup', kind: 'door', x: 1024, code: '1-4', name: 'SOUP KITCHEN', col: C.mint, need: 'qc' },
   { id: 'blender', kind: 'prop', x: 1094, label: 'BLEND', fig: 'smoothie' },
   { id: 'vending', kind: 'prop', x: 1162, label: 'BUY' },
-  { id: 'doublet', kind: 'door', x: 1236, code: '1-5', name: 'DOUBLET HUNT', col: C.pink, soon: true },
+  { id: 'doublet', kind: 'door', x: 1236, code: '1-5', name: 'DOUBLET HUNT', col: C.pink, need: 'soup' },
   { id: 'trace', kind: 'prop', x: 1304, label: 'LOOK', fig: 'trace' },
   { id: 'shower', kind: 'prop', x: 1370, label: 'PULL' },
   { id: 'gel', kind: 'prop', x: 1436, label: 'LOOK', fig: 'gel' },
@@ -43,6 +43,9 @@ const ITEMS = [
 ];
 const EGGS = ITEMS.filter(i => i.kind === 'prop').map(i => i.id);
 const ROBOT = ITEMS.find(i => i.id === 'robot');
+const ROOMS = ['droplets', 'cliff', 'qc', 'soup', 'doublet'];
+const isLocked = it => !!it.need && !G.state.rooms[it.need].done;
+const roomsDone = () => ROOMS.filter(k => G.state.rooms[k].done).length;
 
 const LINES = {
   window: [
@@ -112,24 +115,24 @@ const LINES = {
     'ROBOT: PCR bumps into your shoe, apologises in beeps, and resumes amplification.',
     "ROBOT: Somebody has stuck a label on it: 'NO TEMPLATE CONTROL'.",
   ],
-  qc: ['LOCKED: Room 1-3, the QC gate. Filter out damaged cells without losing the small ones. Opening soon.'],
-  soup: ["LOCKED: Room 1-4, the soup kitchen. Stray RNA gets into every droplet. Today's special: ambient."],
-  doublet: ['LOCKED: Room 1-5, the doublet hunt. The doublets you loaded are waiting in here. They can wait.'],
-  cliffLocked: ['LOCKED: The Cliff needs a sequenced library. Load the chip in room 1-1 first.'],
   intro: [
     'MIKA: You must be the new postdoc. Welcome to the core facility. The coffee is bad and the freezers are full.',
     'MIKA: Your tissue is dissociated and waiting. Bay 1-1 is free, so go and load the chip.',
     'MIKA: One warning. Whatever you do in a room follows you down this corridor. Like a reputation.',
   ],
-  before: ['MIKA: Bay 1-1 is the first door on your right. The cells will not load themselves. I have asked.'],
-  mid: [
-    'MIKA: Good run. The sequencer has finished with your library too. It only complained twice.',
-    'MIKA: Next is the Cliff. There are far more barcodes than cells. Work out which ones are real.',
-  ],
-  end: [
-    'MIKA: Cells called. Quality control comes next, but room 1-3 is still being built. Budget.',
-    'MIKA: Your doublets are still in there, by the way. They will turn up again. They always do.',
-    'MIKA: Take the lift if you want to see what is planned upstairs. It does not go anywhere yet.',
+  mika: [
+    ['MIKA: Bay 1-1 is the first door on your right. The cells will not load themselves. I have asked.'],
+    ['MIKA: Good run. The sequencer has finished with your library too. It only complained twice.',
+      'MIKA: Next is the Cliff. There are far more barcodes than cells. Work out which ones are real.'],
+    ['MIKA: Cells called. Room 1-3 is quality control. Not every called cell is a healthy cell.',
+      'MIKA: Somebody left the thresholds at the values from a tutorial. Do not trust them. Or the somebody.'],
+    ['MIKA: Filtered. Next is the soup kitchen. Stray RNA got into every droplet you made.',
+      'MIKA: Bring your empty droplets from the Cliff. They are the recipe.'],
+    ['MIKA: One room left. The doublets you loaded on day one are still in there. Go and get them.'],
+    ['MIKA: A clean matrix. That is the whole ground floor. I am almost impressed.',
+      'MIKA: Reviewer 2 will see you now. Their door is at the far end. Bring your reasons.'],
+    ['MIKA: You survived review. Upstairs is still under construction.',
+      'MIKA: Have a coffee. Not from that machine.'],
   ],
 };
 const FLOORS = [
@@ -153,21 +156,19 @@ const since = id => (fx[id] === undefined ? 99 : G.t - fx[id]);
 function eggCount() { return EGGS.filter(e => G.state.eggs[e]).length; }
 function showBook() {
   const s = G.state, st = r => (r.done ? ' (' + '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars) + ')' : '');
+  const todo = [['droplets', '1-1 Droplet bay: load the chip'], ['cliff', '1-2 The Cliff: call the cells'], ['qc', '1-3 QC gate: filter damaged cells'],
+    ['soup', '1-4 Soup kitchen: remove stray RNA'], ['doublet', '1-5 Doublet hunt: find the doublets'], ['review', 'Face Reviewer 2']];
   G.book.show({
     floor: 'Ground floor · Core facility', room: 'The corridor',
-    goals: [
-      { id: 'd', text: '1-1 Droplet bay: load the chip' + st(s.rooms.droplets) },
-      { id: 'c', text: '1-2 The Cliff: call the cells' + st(s.rooms.cliff) },
-      { id: 'e', text: 'Poke around: ' + eggCount() + ' of ' + EGGS.length + ' things found' },
-    ],
+    goals: todo.map(r => ({ id: r[0], text: r[1] + st(s.rooms[r[0]]) })).concat([
+      { id: 'e', text: 'Poke around: ' + eggCount() + ' of ' + EGGS.length + ' things found' }]),
     notes: [
       { id: 'walk', open: true, html: 'Arrow keys walk. Space talks, reads, pokes and opens doors. Most things answer back, and some have more than one thing to say.' },
-      { id: 'plan', open: true, html: 'Rooms 1-3 to 1-5 and the upper floors are planned, not built. The lift lists what is coming.' },
+      { id: 'plan', open: true, html: 'The rooms open in order, because the analysis has an order. Floors 2 to 10 are planned, not built. The lift lists them.' },
     ],
     term: null,
   });
-  G.book.goal('d', s.rooms.droplets.done ? true : null);
-  G.book.goal('c', s.rooms.cliff.done ? true : null);
+  todo.forEach(r => G.book.goal(r[0], s.rooms[r[0]].done ? true : null));
   G.book.goal('e', eggCount() === EGGS.length ? true : null);
 }
 function say(lines, after) { talk = new G.Beats(lines.map(l => ({ say: l }))); talkAfter = after || null; }
@@ -183,12 +184,15 @@ function found(id) {
 function interact(it) {
   const s = G.state;
   if (it.kind === 'door') {
-    if (it.soon) { G.sfx('bad'); say(LINES[it.id]); return; }
-    if (it.id === 'cliff' && !s.rooms.droplets.done) { G.sfx('bad'); say(LINES.cliffLocked); return; }
+    if (isLocked(it)) {
+      const need = ITEMS.find(i => i.id === it.need);
+      G.sfx('bad'); say(['LOCKED: Room ' + it.code + ' needs what room ' + need.code + ' makes. Analysis has an order. Sorry.']); return;
+    }
     G.sfx('door'); G.go(it.id, {});
     return;
   }
-  if (it.id === 'mika') { say(!s.rooms.droplets.done ? LINES.before : !s.rooms.cliff.done ? LINES.mid : LINES.end); return; }
+  if (it.id === 'mika') { say(LINES.mika[roomsDone() + (s.rooms.review.done ? 1 : 0)]); return; }
+  if (it.id === 'rev2' && roomsDone() === ROOMS.length) { G.sfx('door'); G.go('review', {}); return; }
   if (it.kind === 'lift') { G.sfx('door'); dir = true; return; }
   const n = pokes[it.id] = (pokes[it.id] || 0) + 1;
   fx[it.id] = G.t;
@@ -268,11 +272,11 @@ G.scenes.corridor = {
     /* header */
     R(0, 0, VW, 11, 'rgba(8,12,26,.85)');
     T('G  CORE FACILITY', 5, 1, C.fog);
-    G.stars(VW - 62, 2, Math.min(3, G.state.rooms.droplets.stars));
-    G.stars(VW - 31, 2, Math.min(3, G.state.rooms.cliff.stars));
+    G.star(VW - 44, 2, true);
+    T(G.totalStars() + '/' + G.MAX_STARS, VW - 5, 1, C.amber, { a: 'right' });
 
     if (near && !talk && !auto && !dir && !fig) {
-      const lab = near.kind === 'door' ? (near.soon || (near.id === 'cliff' && !G.state.rooms.droplets.done) ? 'LOCKED' : 'ENTER ' + near.code) : near.label;
+      const lab = near.kind === 'door' ? (isLocked(near) ? 'LOCKED' : 'ENTER ' + near.code) : near.id === 'rev2' && roomsDone() === ROOMS.length ? 'FACE REVIEW' : near.label;
       const w = Math.ceil(G.tw(lab, 'sm')) + 10, x = G.clamp(Math.round(hero.x - cx - w / 2), 2, VW - w - 2), y = FY - 36 + Math.round(Math.sin(G.t * 4));
       G.panel(x, y, w, 12, { border: C.amber, fill: C.ink });
       T(lab, x + 5, y + 1, C.amber);
@@ -294,9 +298,8 @@ function drawRoom(cx) {
   R(0, WALL, VW, 3, '#222e57');
   for (let x = -(cx % 34); x < VW; x += 34) R(x, WALL + 3, 1, VH - WALL - 3, '#111833');
   /* guide lines on the floor, one per open room, the way hospitals and institutes mark routes */
-  ITEMS.filter(i => i.kind === 'door' && !i.soon).forEach((d, n) => {
-    const open = d.id !== 'cliff' || G.state.rooms.droplets.done;
-    const y = 170 + n * 4, x1 = d.x - cx, col = open ? d.col : '#2a3560';
+  ITEMS.filter(i => i.kind === 'door').forEach((d, n) => {
+    const y = 163 + n * 3, x1 = d.x - cx, col = isLocked(d) ? '#2a3560' : d.col;
     R(-cx, y, d.x, 2, col); R(x1 - 1, WALL + 4, 2, y - WALL - 2, col);
   });
   /* ceiling pipe and lamps; one of them has been flickering since 2022 */
@@ -318,7 +321,7 @@ const table = (x, w) => { R(x - w / 2, 116, w, 16, '#4a587f'); R(x - w / 2, 114,
 function drawItem(it, x) {
   const s = G.state, t = G.t;
   if (it.kind === 'door') {
-    const locked = it.soon || (it.id === 'cliff' && !s.rooms.droplets.done);
+    const locked = isLocked(it);
     const done = s.rooms[it.id] && s.rooms[it.id].done;
     const col = locked ? C.steel : it.col;
     R(x - 17, 78, 34, 54, '#0c1329');
@@ -334,7 +337,6 @@ function drawItem(it, x) {
     T(it.code, x, 55, col, { a: 'center', f: 'smb' });
     T(it.name, x, 64, locked ? C.steel : C.fog, { a: 'center' });
     if (done) G.stars(x - 13, 44, s.rooms[it.id].stars);
-    else if (it.soon) T('SOON', x, 45, C.steel, { a: 'center' });
     return;
   }
   switch (it.id) {
@@ -512,7 +514,8 @@ function drawItem(it, x) {
       R(x - 3 + sway, 91, 6, 6, '#110d1a'); R(x - 6 + sway, 97, 12, 11, '#110d1a');
       if (knock) { R(x - 2 + sway, 93, 1, 1, C.coral); R(x + 1 + sway, 93, 1, 1, C.coral); }
       R(x + 9, 112, 2, 5, C.steel);
-      R(x - 13, 130, 26, 2, Math.floor(t * 5) % 7 ? '#5a1f2a' : '#a8323f');
+      R(x - 13, 130, 26, 2, roomsDone() === ROOMS.length ? C.coral : Math.floor(t * 5) % 7 ? '#5a1f2a' : '#a8323f');
+      if (s.rooms.review.done) G.stars(x - 13, 49, s.rooms.review.stars);
       for (let i = 0; i < Math.min(3, pokes.rev2 || 0); i++) R(x - 12 + i * 5, 110 + i * 3, 5, 6, C.paper);
       G.panel(x - 34, 60, 68, 12, { border: C.coral, fill: C.ink });
       T('REVIEWER 2', x, 61, C.coral, { a: 'center' });
