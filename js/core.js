@@ -380,9 +380,11 @@ G.caption = function (text, t, o) {
   G.panel(x, y, w, h, { border: o.border || C.fog, fill: C.ink });
   if (who) {
     const ww = Math.ceil(G.tw(who, 'smb')) + 8;
-    const ty = o.top ? y + h - 4 : y - 7;
-    G.panel(x + 6, ty, ww, 11, { border: o.border || C.fog, fill: o.accent || C.teal });
-    T(who, x + 10, ty + 1, C.white, { f: 'smb' });
+    /* above the box when it sits at the bottom; under its right end when it sits at the top,
+       where a third line of text would otherwise run into it */
+    const ty = o.top ? y + h - 4 : y - 7, tx = o.top ? x + w - ww - 6 : x + 6;
+    G.panel(tx, ty, ww, 11, { border: o.border || C.fog, fill: o.accent || C.teal });
+    T(who, tx + 4, ty + 1, C.white, { f: 'smb' });
   }
   const lines = G.wrap(text, w - 18, 'md');
   const total = lines.join('').length;
