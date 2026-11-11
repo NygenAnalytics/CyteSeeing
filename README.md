@@ -46,6 +46,17 @@ Each room has a notebook with the objective and field notes, and a terminal that
 
 Floors 2 to 10 are planned. The lift directory in the game lists them.
 
+## Fork it, fix it, build a floor
+
+The game is open source and meant to be changed. Fork this repository to make your own version, or send a pull request to improve this one. Good first changes:
+
+- **Fix the science.** If a room teaches something wrong or out of date, edit its file. Each room's notebook page in the game links straight to it.
+- **Add something to the corridor.** A prop, a line, a figure. The corridor is one file.
+- **Build a room or a floor.** Floors 2 to 10 are listed in the lift and not built yet.
+- **Report a problem.** Open an [issue](https://github.com/NygenAnalytics/CyteSeeing/issues).
+
+A fork should set `G.REPO` in `js/core.js` to its own address, so the links in the game point at the fork.
+
 ## How it is put together
 
 Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. All art is drawn in code in a 320 by 180 grid, at the full resolution of the screen, so it stays sharp on phones and large monitors alike.

@@ -93,7 +93,7 @@ function showBook() {
   const num = (k, w) => '<input class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" type="number" inputmode="numeric" aria-label="' + k + '">';
   const pick = (k, w, vals) => '<select class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" aria-label="' + k + '">' + vals.map(v => '<option value="' + v + '">' + v + '</option>').join('') + '</select>';
   G.book.show({
-    floor: 'Ground floor · Room 1-2', room: 'The Cliff', codeFirst: true,
+    floor: 'Ground floor · Room 1-2', room: 'The Cliff', codeFirst: true, file: 'js/cliff.js',
     goals: [
       { id: 'recall', text: 'Keep at least 97% of the real cells' },
       { id: 'empty', text: 'Let in 1% empty droplets at most' },

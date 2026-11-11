@@ -19,6 +19,8 @@ setScale(1);
 const G = window.G = { VW, VH, cv, ctx, t: 0, scenes: {}, params: {} };
 /* the game's name: change it here and the title screen and page header follow */
 G.NAME = 'CyteSeeing';
+/* where the game's source lives. A fork should point this at itself. */
+G.REPO = 'https://github.com/NygenAnalytics/CyteSeeing';
 G.setScale = setScale;
 G.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 /* true on phones and tablets: hints name taps instead of keys, and tap targets get a little slack */

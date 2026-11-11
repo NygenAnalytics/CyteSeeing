@@ -132,7 +132,8 @@ const LINES = {
     ['MIKA: A clean matrix. That is the whole ground floor. I am almost impressed.',
       'MIKA: Reviewer 2 will see you now. Their door is at the far end. Bring your reasons.'],
     ['MIKA: You survived review. Upstairs is still under construction.',
-      'MIKA: Have a coffee. Not from that machine.'],
+      'MIKA: If you can code, you could build it. The whole institute is open source, on GitHub.',
+      'MIKA: Have a coffee first. Not from that machine.'],
   ],
 };
 const FLOORS = [
@@ -159,7 +160,7 @@ function showBook() {
   const todo = [['droplets', '1-1 Droplet bay: load the chip'], ['cliff', '1-2 The Cliff: call the cells'], ['qc', '1-3 QC gate: filter damaged cells'],
     ['soup', '1-4 Soup kitchen: remove stray RNA'], ['doublet', '1-5 Doublet hunt: find the doublets'], ['review', 'Face Reviewer 2']];
   G.book.show({
-    floor: 'Ground floor · Core facility', room: 'The corridor', methods: true,
+    floor: 'Ground floor · Core facility', room: 'The corridor', methods: true, file: 'js/corridor.js', fileText: 'add something to this corridor', fileTail: ' yourself.',
     goals: todo.map(r => ({ id: r[0], text: r[1] + st(s.rooms[r[0]]) })).concat([
       { id: 'e', text: 'Poke around: ' + eggCount() + ' of ' + EGGS.length + ' things found' }]),
     notes: [
@@ -580,7 +581,7 @@ function drawFront(cx) {
 
 function drawDirectory() {
   R(0, 0, VW, VH, 'rgba(6,9,20,.8)');
-  G.panel(18, 8, 284, 164, { border: C.fog, fill: C.ink });
+  G.panel(18, 6, 284, 170, { border: C.fog, fill: C.ink });
   T('LIFT DIRECTORY', 28, 14, C.amber, { f: 'smb' });
   T(G.kt('PRESS ANY KEY', 'TAP TO CLOSE'), 292, 14, C.steel, { a: 'right' });
   R(26, 25, 268, 1, C.slate);
@@ -593,6 +594,7 @@ function drawDirectory() {
     if (!here) { R(286, y + 3, 5, 4, C.steel); R(287, y + 1, 3, 3, C.steel); R(288, y + 2, 1, 1, C.ink); }
   });
   R(26, 152, 268, 1, C.slate);
-  T('FLOORS 2 TO 10 ARE UNDER CONSTRUCTION. BRING A HARD HAT.', 28, 158, C.fog);
+  T('FLOORS 2 TO 10 ARE UNDER CONSTRUCTION.', 28, 155, C.fog);
+  T('BUILDERS WANTED: IT IS OPEN SOURCE, ON GITHUB.', 28, 165, C.cyan);
 }
 })();

@@ -25,6 +25,11 @@ book.show = function (cfg) {
   renderNotes();
   book.log();
   $('nb-src').innerHTML = SRC;
+  /* the game is open source: every notebook page points at the file behind the room it describes */
+  const link = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
+  $('nb-edit').innerHTML = 'Open source. ' + link(G.REPO, 'Fork it on GitHub') +
+    (cfg.file ? ', or ' + link(G.REPO + '/edit/main/' + cfg.file, cfg.fileText || 'edit this room') + (cfg.fileTail || ' if you spot a mistake or have a better joke.')
+      : ' to change it, extend it or build the next floor.');
   const meth = cfg.methods ? book.methods() : '';
   $('nb-meth-box').hidden = !meth;
   $('nb-meth').textContent = meth;

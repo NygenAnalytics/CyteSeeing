@@ -46,13 +46,16 @@ body {
 .brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
 .logo { font-family: var(--display); font-weight: 700; font-size: 24px; line-height: 1; letter-spacing: .12em; color: var(--cyan); margin: 0; }
 .tag { color: var(--muted); }
-.tools { display: flex; gap: 8px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
   color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
   padding: 6px 9px; cursor: pointer;
 }
 .chip:hover { border-color: var(--cyan); }
+/* the one way out of the game: its source */
+.chip.gh { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 700; color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
+.chip.gh:hover { background: var(--fg); border-color: var(--fg); }
 .chip:focus-visible, .lang:focus-visible, .pad button:focus-visible, .p:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
 .layout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; justify-content: center; }
@@ -165,6 +168,10 @@ span.p { display: inline-block; height: auto; }
       <span class="tag">a single-cell analysis adventure</span>
     </div>
     <div class="tools">
+      <a class="chip gh" id="link-repo" href="https://github.com/NygenAnalytics/CyteSeeing" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="4" cy="3.2" r="1.7"/><circle cx="12" cy="3.2" r="1.7"/><circle cx="8" cy="12.8" r="1.7"/><path d="M4 4.9v1.6c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2V4.9M8 8.5v2.6"/></svg>
+        Fork on GitHub
+      </a>
       <button class="chip" id="btn-full" type="button" hidden>Full screen</button>
       <button class="chip" id="btn-sound" type="button" aria-pressed="false">Sound off</button>
       <button class="chip" id="btn-reset" type="button">Restart game</button>
@@ -216,6 +223,7 @@ span.p { display: inline-block; height: auto; }
           <button class="chip" id="btn-copy" type="button">Copy</button>
         </div>
         <p class="src" id="nb-src"></p>
+        <p class="src" id="nb-edit"></p>
       </section>
       <section class="card" id="card-term">
         <p class="eyebrow">Terminal</p>

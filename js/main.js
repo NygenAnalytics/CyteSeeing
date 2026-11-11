@@ -66,6 +66,7 @@ reset.addEventListener('click', () => {
 
 function boot() {
   G.loadSave();
+  document.getElementById('link-repo').href = G.REPO;
   document.querySelector('.logo').textContent = G.NAME.toUpperCase();
   const b = document.getElementById('btn-sound');
   b.textContent = G.state.sound ? 'Sound on' : 'Sound off';

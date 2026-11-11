@@ -80,7 +80,7 @@ function sync() {
 function showBook() {
   const num = (k, w, step) => '<input class="p" data-p="' + k + '" id="q-' + k + '-' + w + '" type="number" step="' + (step || 1) + '" inputmode="decimal" aria-label="' + k + '">';
   G.book.show({
-    floor: 'Ground floor · Room 1-3', room: 'The QC gate', codeFirst: true,
+    floor: 'Ground floor · Room 1-3', room: 'The QC gate', codeFirst: true, file: 'js/qc.js',
     goals: [
       { id: 'junk', text: 'Remove at least 90% of the damaged cells and debris' },
       { id: 'healthy', text: 'Keep at least 95% of the healthy cells' },

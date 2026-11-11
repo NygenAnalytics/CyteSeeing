@@ -89,7 +89,7 @@ function showBook() {
   const num = w => '<input class="p" data-p="thr" id="d-thr-' + w + '" type="number" step="0.05" min="0.3" max="1" inputmode="decimal" aria-label="score cut-off">';
   const dbr = '<span class="p" data-b="dbr"></span>';
   G.book.show({
-    floor: 'Ground floor · Room 1-5', room: 'The doublet hunt', codeFirst: true,
+    floor: 'Ground floor · Room 1-5', room: 'The doublet hunt', codeFirst: true, file: 'js/doublets.js',
     goals: [
       { id: 'catch', text: 'Catch at least 80% of the two-type doublets' },
       { id: 'spare', text: 'Remove no more than 2 innocent cells' },

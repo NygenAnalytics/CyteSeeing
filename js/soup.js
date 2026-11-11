@@ -53,7 +53,7 @@ function sync() {
 function showBook() {
   const num = w => '<input class="p" data-p="rho" id="s-rho-' + w + '" type="number" step="0.01" min="0" max="0.4" inputmode="decimal" aria-label="soup share">';
   G.book.show({
-    floor: 'Ground floor · Room 1-4', room: 'The soup kitchen', codeFirst: true,
+    floor: 'Ground floor · Room 1-4', room: 'The soup kitchen', codeFirst: true, file: 'js/soup.js',
     goals: [
       { id: 'near', text: 'Get within 2 points of the real soup share' },
       { id: 'ghost', text: 'Leave no gene in a cell that cannot make it' },

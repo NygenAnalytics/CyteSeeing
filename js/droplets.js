@@ -51,7 +51,7 @@ function resetStream() { planned = []; cells = []; beads = []; drops = []; lastP
 
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · Room 1-1', room: 'The droplet bay',
+    floor: 'Ground floor · Room 1-1', room: 'The droplet bay', file: 'js/droplets.js',
     goals: [
       { id: 'cells', text: 'At least 8,000 singlets' },
       { id: 'rate', text: 'Doublets at 4% or less' },

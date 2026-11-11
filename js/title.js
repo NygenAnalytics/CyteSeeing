@@ -23,6 +23,7 @@ const WORD = G.NAME.toUpperCase().replace(/[^A-Z]/g, '');
 /* long names get smaller cells so the logo always fits the screen */
 const PITCH = [6, 5, 4].find(p => p * (6 * WORD.length - 1) <= 312) || 4, LX = Math.round((VW - (WORD.length * 5 * PITCH + (WORD.length - 1) * PITCH)) / 2), LY = 22;
 const TAGS = [
+  'OPEN SOURCE. FORK IT ON GITHUB.',
   'NO CELLS WERE HARMED. MANY WERE LYSED.', 'NOW WITH 90% MORE ZEROS.', 'BATCH EFFECTS SOLD SEPARATELY.',
   'PEER REVIEWED BY NOBODY. YET.', 'A UMAP IS A MAP, NOT A RESULT.', 'DOUBLETS INCLUDED AT NO EXTRA COST.',
 ];
@@ -39,7 +40,7 @@ G.scenes.title = {
     for (let i = 0; i < 26; i++) rain.push(newDrop(true));
     G.book.show({
       floor: 'Lab notebook', room: 'Day one',
-      goals: [{ id: 'start', text: 'Press Space, or click the screen, to start.' }],
+      goals: [{ id: 'start', text: G.kt('Press Space, or click the screen, to start.', 'Tap the screen to start.') }],
       notes: [{ id: 'how', open: true, html: 'Walk the corridor, step into a room, and play the analysis step that lives there. Your choices follow you from room to room.' },
               { id: 'who', open: true, html: 'Made for people who learn single-cell analysis by doing: students, clinicians, postdocs. No install, no data to download.' }],
       term: null,

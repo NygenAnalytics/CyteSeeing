@@ -35,7 +35,7 @@ function record() {
 }
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · The last door', room: 'Reviewer 2', methods: true,
+    floor: 'Ground floor · The last door', room: 'Reviewer 2', methods: true, file: 'js/review.js', fileText: 'edit the questions', fileTail: ' if one of them is unfair.',
     goals: [{ id: 'three', text: 'Answer at least 3 of the 5 questions' }, { id: 'five', text: 'Answer all 5 for a clean accept' }],
     notes: [
       { id: 'r-hint', open: true, html: 'Everything Reviewer 2 asks was answered in a room on this floor. The right answer is the reasoning, not the number.' },
