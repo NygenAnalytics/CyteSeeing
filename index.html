@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CyteSeeing</title>
+<meta name="description" content="A pixel-art game for learning single-cell analysis. Walk the corridor, poke things, and play each analysis step.">
+<style>
+/* Layout: an arcade screen on the left, the player's lab notebook and a code terminal on the right;
+   one committed night-shift look, so there is no light variant. */
+:root {
+  color-scheme: dark;
+  --bg: #070b16;
+  --panel: #0e1630;
+  --panel-hi: #17224a;
+  --line: #2a3966;
+  --fg: #efe9d6;
+  --muted: #93a4c8;
+  --cyan: #4fd6e8;
+  --lilac: #b79df6;
+  --amber: #f6ba4c;
+  --coral: #f0655f;
+  --mint: #7be0a1;
+  --display: 'Silkscreen', 'Courier New', monospace;
+  --body: 'VT323', 'Courier New', monospace;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+}
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 20px;
+  line-height: 1.1;
+}
+.wrap {
+  max-width: 1420px;
+  margin: 0 auto;
+  padding-block: 14px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 14px;
+}
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; min-width: 0; }
+.logo { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .14em; color: var(--cyan); margin: 0; }
+.tag { color: var(--muted); }
+.tools { display: flex; gap: 8px; }
+.chip {
+  font-family: var(--display); font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+  padding: 6px 9px; cursor: pointer;
+}
+.chip:hover { border-color: var(--cyan); }
+.chip:focus-visible, .lang:focus-visible, .pad button:focus-visible, .p:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.layout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; justify-content: center; }
+.stage { display: grid; gap: 10px; justify-items: center; min-width: 0; }
+.frame { background: #000; border: 2px solid var(--line); border-radius: 6px; padding: 6px; max-width: 100%; }
+#screen {
+  display: block; width: 320px; max-width: 100%; height: auto; aspect-ratio: 16 / 9;
+  image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; outline: none; cursor: pointer;
+}
+#screen:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.keys { margin: 0; color: var(--muted); text-align: center; text-wrap: balance; }
+.keys kbd { font-family: var(--display); font-size: 10px; color: var(--fg); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; background: var(--panel); }
+.pad { display: none; gap: 10px; width: 100%; max-width: 420px; justify-content: space-between; }
+.pad div { display: flex; gap: 10px; }
+.pad button {
+  font-family: var(--display); font-size: 14px; color: var(--fg); background: var(--panel-hi);
+  border: 2px solid var(--line); border-radius: 6px; min-width: 62px; height: 52px; touch-action: none; user-select: none;
+}
+.pad .act { min-width: 110px; border-color: var(--cyan); }
+@media (hover: none), (pointer: coarse) { .pad { display: flex; } .keys { display: none; } }
+
+.book { display: grid; gap: 14px; min-width: 0; max-width: 560px; }
+.book.code-first #card-term { order: -1; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px 14px; min-width: 0; }
+.eyebrow { font-family: var(--display); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.card h2 { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .04em; margin: 0 0 10px; color: var(--fg); text-wrap: balance; }
+.card h3 { font-family: var(--display); font-weight: 400; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 12px 0 5px; }
+.goals, .notes, .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.goals li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; align-items: baseline; }
+.goals li::before { content: '[ ]'; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: pre; }
+.goals li.done::before { content: '[x]'; color: var(--mint); }
+.goals li.fail::before { content: '[!]'; color: var(--coral); }
+.goals li.done { color: var(--mint); }
+.notes li { border-left: 2px solid var(--line); padding: 1px 0 1px 9px; }
+.notes li.new { border-left-color: var(--amber); animation: note-in .5s ease-out; }
+.notes li b, .term-intro b { color: var(--amber); font-weight: 400; }
+.log li { color: var(--muted); }
+.log li b { color: var(--cyan); font-weight: 400; }
+.src { margin: 12px 0 0; color: var(--muted); font-size: 17px; }
+.src a { color: var(--cyan); }
+@keyframes note-in { from { background: rgba(246, 186, 76, .22); } to { background: transparent; } }
+
+.langs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.lang {
+  font-family: var(--display); font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 3px; padding: 5px 7px; cursor: pointer;
+}
+.lang[aria-selected="true"] { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
+.term-intro { margin: 0 0 8px; color: var(--muted); }
+pre.code {
+  margin: 0; padding: 10px 11px; background: #060914; border: 1px solid var(--line); border-radius: 3px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.55; color: #d7def0; overflow-x: auto; white-space: pre; tab-size: 2;
+}
+pre.code + pre.code { margin-top: 8px; }
+.code .c { color: #6f82ad; }
+.code .s { color: var(--mint); }
+.code .k { color: var(--lilac); }
+.code .hl { transition: opacity .2s; }
+.code .hl.off { opacity: .38; }
+.p {
+  font-family: var(--mono); font-size: 12.5px; color: var(--bg); background: var(--amber);
+  border: 0; border-radius: 2px; padding: 0 3px; height: 18px; vertical-align: baseline;
+}
+input.p { width: 6.5ch; text-align: right; -moz-appearance: textfield; appearance: textfield; }
+input.p::-webkit-outer-spin-button, input.p::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+span.p { display: inline-block; height: auto; }
+.term-tip { margin: 8px 0 0; color: var(--muted); font-size: 17px; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .book { max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) { .notes li.new { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">
+      <h1 class="logo">CYTESEEING</h1>
+      <span class="tag">a single-cell analysis adventure · demo floor</span>
+    </div>
+    <div class="tools">
+      <button class="chip" id="btn-sound" type="button" aria-pressed="false">Sound off</button>
+      <button class="chip" id="btn-reset" type="button">Restart game</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="stage" id="stage">
+      <div class="frame">
+        <canvas id="screen" tabindex="0" aria-label="CyteSeeing game screen. Use the arrow keys to walk and Space to act."></canvas>
+      </div>
+      <div class="pad" aria-label="Touch controls">
+        <div>
+          <button type="button" data-key="left" aria-label="Left">&lt;</button>
+          <button type="button" data-key="right" aria-label="Right">&gt;</button>
+        </div>
+        <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
+      </div>
+      <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> walk and adjust · <kbd>Space</kbd> act · <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a control · <kbd>Esc</kbd> leave a room · <kbd>M</kbd> sound</p>
+    </div>
+
+    <aside class="book" aria-label="Lab notebook and terminal">
+      <section class="card" id="card-notes" aria-live="polite">
+        <p class="eyebrow" id="nb-floor">Lab notebook</p>
+        <h2 id="nb-room">CyteSeeing</h2>
+        <h3>Objective</h3>
+        <ul class="goals" id="nb-goals"></ul>
+        <h3 id="nb-notes-h">Field notes</h3>
+        <ul class="notes" id="nb-notes"></ul>
+        <h3 id="nb-log-h">What you carry</h3>
+        <ul class="log" id="nb-log"></ul>
+        <p class="src" id="nb-src"></p>
+      </section>
+      <section class="card" id="card-term">
+        <p class="eyebrow">Terminal</p>
+        <h2 id="term-title">Same step, in code</h2>
+        <div class="langs" id="term-langs" role="tablist" aria-label="Tool"></div>
+        <div id="term-body"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="js/fonts.js"></script>
+<script src="js/core.js"></script>
+<script src="js/book.js"></script>
+<script src="js/figures.js"></script>
+<script src="js/title.js"></script>
+<script src="js/corridor.js"></script>
+<script src="js/droplets.js"></script>
+<script src="js/cliff.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
