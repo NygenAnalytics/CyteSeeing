@@ -4,7 +4,7 @@
 (function () {
 'use strict';
 const $ = id => document.getElementById(id);
-const book = G.book = { cfg: null, onParam: null, lang: {} };
+const book = G.book = { cfg: null, onParam: null, lang: {}, states: {} };
 
 const SRC = 'Built on the <a href="https://www.sc-best-practices.org/" target="_blank" rel="noopener">Single-cell best practices</a> book ' +
   'and the papers behind each method.';
@@ -17,7 +17,9 @@ function fmtParam(k, v) {
 
 /* cfg: { floor, room, goals: [{id, text}], notes: [{id, html, open}], term: {title, intro, tabs: [{id, label, html}], tip} | null } */
 book.show = function (cfg) {
-  book.cfg = cfg;
+  book.cfg = cfg; book.states = {};
+  /* a page with an aim belongs to a game: the screen shows the same goals as a job card and as lights */
+  G.job = cfg.aim ? { title: cfg.room, aim: cfg.aim, goals: cfg.goals } : null;
   document.querySelector('.book').classList.toggle('code-first', !!cfg.codeFirst);
   $('nb-floor').textContent = cfg.floor || 'Lab notebook';
   $('nb-room').textContent = cfg.room;
@@ -64,6 +66,7 @@ book.unlock = function (id) {
 };
 /* state: true = met, false = missed, null = not judged yet */
 book.goal = function (id, state) {
+  book.states[id] = state;
   const li = document.querySelector('[data-g="' + id + '"]');
   if (!li) return;
   li.classList.toggle('done', state === true);
@@ -79,6 +82,15 @@ book.log = function () {
     (s.qc.lost ? ', and you lost most of the <b>' + s.qc.lost + '</b>.' : '.'));
   if (s.soup) rows.push('Removed a soup share of <b>' + s.soup.rho + '%</b>. The real share was ' + s.soup.truth + '%.');
   if (s.dbl) rows.push('Removed <b>' + G.fmt(s.dbl.removed) + '</b> flagged cells. <b>' + G.fmt(s.dbl.missed) + '</b> doublets are still in the data.');
+  const cl = s.cloud || {};
+  if (s.rooms.norm.done && !s.rooms.norm.by) rows.push('Normalised the counts: divided by depth, then log(1 + x).');
+  if (s.rooms.hvg.done && cl.n) rows.push('Picked <b>' + cl.n + '</b> of 207 genes by ' + (cl.method === 'raw' ? 'plain variance' : 'variance above the trend') +
+    (cl.block ? ', skipping MT- and RP genes.' : '. MT- and RP genes are in the list.'));
+  if (s.rooms.pca.done && cl.dims) rows.push('Kept <b>' + cl.dims + '</b> principal components.');
+  if (s.rooms.knn.done && cl.k) rows.push('Linked every cell to its <b>' + cl.k + '</b> nearest neighbours.');
+  if (s.rooms.umap.done && cl.seed) rows.push('Drew the map with seed <b>' + cl.seed + '</b>. A map, not a result.');
+  const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
+  if (lent) rows.push('Your student ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
   $('nb-log').innerHTML = rows.map(r => '<li>' + r + '</li>').join('');
 };
@@ -94,6 +106,13 @@ book.methods = function () {
     (s.qc.nmad ? ' (' + s.qc.nmad + ' median absolute deviations from the median)' : '') + ', leaving ' + G.fmt(s.qc.kept) + '.');
   if (s.soup) m.push('Ambient RNA was removed with a contamination fraction of ' + (s.soup.rho / 100).toFixed(2) + '.');
   if (s.dbl && s.dbl.thr) m.push('Doublets were called from simulated doublets at a score cut-off of ' + s.dbl.thr + ', and ' + G.fmt(s.dbl.removed) + ' cells were removed.');
+  const cl = s.cloud || {};
+  if (s.rooms.norm.done) m.push('Counts were normalised to the median library size and log-transformed (log1p).');
+  if (s.rooms.hvg.done && cl.n) m.push('The ' + cl.n + ' most variable of 207 genes were selected' + (cl.method === 'raw' ? ' by variance' : ' by variance above the mean-variance trend') +
+    (cl.block ? ', excluding mitochondrial and ribosomal genes.' : '.'));
+  if (s.rooms.pca.done && cl.dims) m.push('Genes were scaled to unit variance and the first ' + cl.dims + ' principal components were kept.');
+  if (s.rooms.knn.done && cl.k) m.push('A neighbour graph was built on these components with k = ' + cl.k + '.');
+  if (s.rooms.umap.done && cl.seed) m.push('The graph was laid out in two dimensions (random seed ' + cl.seed + ') for display only.');
   return m.join(' ');
 };
 

@@ -18,11 +18,18 @@ const KIND = {
 };
 
 const INTRO = [
-  { say: 'Called cells are not all healthy cells. Some broke open on the way here, and their RNA leaked out.' },
-  { say: 'A broken cell keeps its mitochondria. So it shows few genes, and a large share of mitochondrial reads.' },
-  { say: 'Each dot is a cell: genes detected across, mitochondrial share up. Healthy cells sit low and to the right.' },
-  { say: 'Set the two lines, then filter. Somebody left them at the numbers from a tutorial. For a different tissue.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Each dot is a called cell. Further right means more genes detected. Higher up means more mitochondrial reads.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'A damaged cell has leaked its RNA but kept its mitochondria. So damaged cells sit in the upper left.' },
+  { spot: [0, 130, VW, 50], say: 'Move the two lines to cut the damaged cells away. They start at numbers from another tutorial. Then press FILTER.' },
+  { spot: [0, 130, VW, 50], say: 'Or use SNAP TO MADS. It sets both lines from your own data: a few typical spreads away from the median cell.' },
 ];
+function verdict(s) {
+  if (!s.okA) return 'Too many damaged cells are still in. Later they would form a cluster of their own. Tighten the lines.';
+  if (s.busy < 0.8) return 'You removed healthy cells that naturally have a high mitochondrial share: the purple ones. Raise the mitochondrial line.';
+  if (s.small !== null && s.small < 0.8) return 'You removed the small healthy cells: the blue ones. Few genes is not damage. Their mitochondria are fine. Lower the gene line.';
+  if (s.stars === 3) return 'The damaged cells are out, and every healthy population is still in. Lenient lines, read off your own data.';
+  return 'Most damaged cells are out, but too many healthy cells went with them. Loosen the lines a little.';
+}
 
 let phase, beats, pt, actors, minG, maxM, nmad, sel, stats, rsel, st, drag, lastSync, wc, nSmall;
 
@@ -80,7 +87,7 @@ function sync() {
 function showBook() {
   const num = (k, w, step) => '<input class="p" data-p="' + k + '" id="q-' + k + '-' + w + '" type="number" step="' + (step || 1) + '" inputmode="decimal" aria-label="' + k + '">';
   G.book.show({
-    floor: 'Ground floor · Room 1-3', room: 'The QC gate', codeFirst: true, file: 'js/qc.js',
+    floor: 'Ground floor · Room 1-3', room: 'The QC gate', aim: 'Remove the damaged cells. Keep the healthy ones, even the unusual ones.', codeFirst: true, file: 'js/qc.js',
     goals: [
       { id: 'junk', text: 'Remove at least 90% of the damaged cells and debris' },
       { id: 'healthy', text: 'Keep at least 95% of the healthy cells' },
@@ -88,9 +95,9 @@ function showBook() {
     ],
     notes: [
       { id: 'q-why', open: true, html: 'A damaged cell leaks its cytoplasmic RNA but keeps its mitochondria: <b>few genes and a high mitochondrial share, together</b>. Look at both measures at once.' },
-      { id: 'q-tut', html: 'Thresholds copied from a tutorial fit that tutorial\'s tissue. Some healthy cells have few genes. Some have busy mitochondria. <b>Read the cut-offs off your own data.</b>' },
+      { id: 'q-tut', html: 'Thresholds copied from a tutorial fit that tutorial\'s tissue. Some healthy cells have few genes. Some naturally have a high mitochondrial share. <b>Read the cut-offs off your own data.</b>' },
       { id: 'q-mad', html: 'Best practice: flag outliers by <b>median absolute deviations</b> (MADs) from the median, and stay lenient, around 5 MADs. Strict cut-offs remove small populations first.' },
-      { id: 'q-after', html: 'QC is not final. If a cluster later turns out to be damaged cells, come back and tighten. Stray RNA and doublets are separate steps: rooms 1-4 and 1-5.' },
+      { id: 'q-after', html: 'QC is not final. If a cluster later turns out to be damaged cells, come back and tighten the thresholds. Ambient RNA and doublets are separate steps: rooms 1-4 and 1-5.' },
     ],
     term: {
       title: 'Same step, in code',
@@ -192,15 +199,10 @@ G.scenes.qc = {
     R(0, 0, VW, VH, '#0b1122');
     drawPlot(); drawSide();
     G.roomHeader('1-3  QC GATE', C.amber, true);
-    if (phase === 'intro') beats.draw();
+    if (phase === 'intro') { drawControls(); beats.draw(); }
     else if (phase === 'set') drawControls();
     else {
-      const s = stats;
-      const msg = !s.okA ? 'Damaged cells are still in. They will form a cluster of their own and waste your day.'
-        : s.busy < 0.8 ? 'You removed healthy cells with busy mitochondria. Tutorial numbers fit the tutorial.'
-        : s.small !== null && s.small < 0.8 ? 'The small cells are gone. Few genes is not damage: their mitochondria are fine.'
-        : s.stars === 3 ? 'Damaged cells out, every population still here. Lenient, and read off your own data.'
-        : 'The junk is out, but so are too many healthy cells. Loosen the lines a little.';
+      const s = stats, msg = verdict(s);
       const act = G.resultDraw(130, msg, s.stars > 0, rsel, 'MOVE THE LINES', 'KEEP THESE CELLS');
       if (act === 'keep') keep(); else if (act === 'retry') retry();
     }
@@ -259,7 +261,7 @@ function drawSide() {
   row(17, 'DAMAGED OUT', C.coral, pc(s.junkOut), s.okA, '90%+');
   row(39, 'HEALTHY IN', C.mint, pc(s.healthy), s.okB, '95%+');
   row(61, 'SMALL CELLS', C.cyan, s.small === null ? 'NONE' : pc(s.small), s.small === null || s.small >= 0.8, s.small === null ? '' : '80%+');
-  row(83, 'BUSY CELLS', C.lilac, pc(s.busy), s.busy >= 0.8, '80%+');
+  row(83, 'ACTIVE CELLS', C.lilac, pc(s.busy), s.busy >= 0.8, '80%+');
   G.stars(x + 6, 110, s.stars);
   if (s.small === null) T('LOST AT 1-2', x + w - 6, 110, C.steel, { a: 'right' });
 }

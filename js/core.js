@@ -47,13 +47,17 @@ function fresh() {
     rooms: {
       droplets: { done: false, stars: 0 }, cliff: { done: false, stars: 0 }, qc: { done: false, stars: 0 },
       soup: { done: false, stars: 0 }, doublet: { done: false, stars: 0 }, review: { done: false, stars: 0 },
+      norm: { done: false, stars: 0 }, hvg: { done: false, stars: 0 }, pca: { done: false, stars: 0 },
+      knn: { done: false, stars: 0 }, umap: { done: false, stars: 0 }, club: { done: false, stars: 0 },
     },
+    floor: 'g',      // which floor the player is on
+    cloud: null,     // the choices made on floor 2: { depth, log, method, n, block, dims, k, seed, pack }
     load: null,      // what you loaded in 1-1: { R, lanes, singlets, doublets, rate }
     calls: null,     // what you called in 1-2: { called, recall, empties, doublets }
     qc: null,        // what you filtered in 1-3
     soup: null,      // what you corrected in 1-4
     dbl: null,       // what you removed in 1-5
-    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0 },
+    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0 },
     notes: {},       // field notes unlocked so far
     eggs: {}, met: false, sound: false,
   };
@@ -74,7 +78,7 @@ G.save = function () { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.sta
 G.resetSave = function () { const snd = G.state.sound; G.state = fresh(); G.state.sound = snd; G.save(); };
 G.hasProgress = () => G.state.met || G.state.rooms.droplets.done;
 G.totalStars = () => Object.keys(G.state.rooms).reduce((n, k) => n + G.state.rooms[k].stars, 0);
-G.MAX_STARS = 18;
+G.maxStars = () => Object.keys(G.state.rooms).length * 3;
 
 /* ================= utils ================= */
 G.fmt = n => Math.round(n).toLocaleString('en-US');
@@ -215,6 +219,7 @@ const KEYMAP = {
   ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
   a: 'left', d: 'right', w: 'up', s: 'down',
   ' ': 'a', Enter: 'a', z: 'a', e: 'a', Escape: 'b', Backspace: 'b', x: 'b',
+  g: 'goal', h: 'goal', '?': 'goal', l: 'lift',
 };
 const down = G.down = {}, hit = {}, held = {};
 const isField = el => el && el !== cv && /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(el.tagName);
@@ -324,20 +329,54 @@ G.roomHeader = function (title, col, leave) {
   if (G.touch) { G.panel(VW - 44, 0, 42, 11, { border: over ? C.cyan : C.steel, fill: C.night }); T('LEAVE', VW - 23, 1, C.fog, { a: 'center' }); }
   else T('ESC: LEAVE', VW - 5, 1, over ? C.fog : C.steel, { a: 'right' });
   if (ptr.pressed && over) G.press('b');
+  /* the goals of this game, as lights: grey until judged, then green or red. A tap or G opens the job card. */
+  const job = G.job;
+  if (job) {
+    const hot = G.over(146, 0, 30 + job.goals.length * 8, 12);
+    T('GOAL', 148, 1, hot ? C.white : C.amber);
+    job.goals.forEach((g, i) => {
+      const st = G.book.states[g.id], x = 174 + i * 8;
+      R(x, 3, 6, 6, st === true ? C.mint : st === false ? C.coral : C.steel);
+      if (st !== true && st !== false) R(x + 1, 4, 4, 4, C.night);
+    });
+    if (ptr.pressed && hot) { G.card.open = true; G.card.t = 0; }
+  }
 };
 G.strip = function (y0) { R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.slate); };
-/* a result: two lines of text and two buttons. Returns 'retry', 'keep' or null. */
-G.resultDraw = function (y0, msg, pass, rsel, a, b) {
+/* A result. First the mentor says why, in a speech box, a few short lines at a time. Then a
+   headline and two buttons. resultDraw returns 'retry', 'keep' or null; resultKeys does the
+   same for the keyboard. Both stay quiet while the mentor is still talking. */
+let vd = null;
+G.resultHead = function (y0, pass) {
   G.strip(y0);
-  G.wrap(msg, 300, 'md').slice(0, 2).forEach((l, i) => T(l, 10, y0 + 3 + i * 11, C.paper, { f: 'md' }));
+  T(pass ? 'PASSED' : 'NOT YET', 10, y0 + 5, pass ? C.mint : C.coral, { f: 'lg' });
+};
+function verdictFor(msg) {
+  if (!vd || vd.key !== msg || G.frame - vd.seen > 2) vd = { key: msg, beats: new G.Beats([{ say: msg }]), done: false };
+  vd.seen = G.frame;
+  return vd;
+}
+G.resultDraw = function (y0, msg, pass, rsel, a, b) {
+  const v = verdictFor(msg);
+  G.resultHead(y0, pass);
+  if (!v.done) { v.beats.draw(); return null; }
   let act = null;
   if (G.button('res-a', 10, y0 + 29, 104, 15, a, { focus: rsel === 0 || !pass })) act = 'retry';
   if (pass && G.button('res-b', 176, y0 + 29, 134, 15, b, { primary: true, focus: rsel === 1 })) act = 'keep';
   return act;
 };
 G.resultKeys = function (rsel, pass) {
+  if (vd && !vd.done && G.frame - vd.seen <= 2) { if (vd.beats.update(G.dt) === 'done') vd.done = true; return { rsel, act: null }; }
   if (G.hit('left') || G.hit('right')) { rsel = 1 - rsel; G.sfx('tick'); }
   return { rsel, act: G.hit('a') ? (rsel === 1 && pass ? 'keep' : 'retry') : null };
+};
+/* a small bouncing arrow that points at the thing to press next: (x, y) is its tip */
+G.cue = function (x, y, down) {
+  const b = Math.round(Math.abs(Math.sin(G.t * 6)) * 3);
+  for (let i = 0; i < 4; i++) {
+    if (down) { R(x - 3 + i, y - 6 - b + i - 1, 7 - 2 * i, 1, C.ink); R(x - 3 + i, y - 7 - b + i, 7 - 2 * i, 1, C.amber); }
+    else { R(x - 6 - b + i, y - 3 + i, 1, 7 - 2 * i, C.amber); }
+  }
 };
 
 /* ================= sound ================= */
@@ -369,14 +408,44 @@ G.toggleSound = function () {
   G.sfx('ok');
 };
 
-/* ================= captions, beats, toasts ================= */
-/* A caption box across the bottom. Returns true once the whole line is on screen. */
+/* ================= speech, inside the screen ================= */
+/* Everything the game tells the player is said by somebody in it, in a speech box on the
+   screen: a few short lines, a small portrait, press to go on. The mentor of the floor (Mika
+   downstairs, Noor upstairs) says whatever is not said by anyone else. */
+const SPEAKER = /^([A-Z0-9 .'-]{2,16}): /;
+G.LOOKS = {
+  MIKA: { skin: C.skin2, hair: '#1b1b2a', style: 'bun', coat: '#2f9e8f', shirt: C.paper, glasses: true },
+  NOOR: { skin: C.skin3, hair: '#15101f', style: 'long', coat: '#5a3f8c', shirt: '#2a2140' },
+  'PHD STUDENT': { skin: C.skin3, hair: '#20182a', style: 'short', coat: '#5b6ea8', shirt: '#5b6ea8' },
+  YOU: { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, shirt: C.cyan },
+  'REVIEWER 2': { shade: true },
+};
+G.mentor = () => (G.state.floor === '2' ? 'NOOR' : 'MIKA');
+/* a 16 by 16 portrait */
+G.face = function (x, y, k, talking) {
+  R(x, y, 16, 16, '#101a36');
+  if (k.shade) { R(x + 3, y + 3, 10, 13, '#05040a'); R(x + 5, y + 8, 2, 2, C.coral); R(x + 9, y + 8, 2, 2, C.coral); return; }
+  R(x + 1, y + 13, 14, 3, k.coat); R(x + 6, y + 13, 4, 2, k.shirt);
+  R(x + 3, y + 3, 10, 10, k.skin);
+  const side = k.style === 'long' ? 12 : 4;
+  R(x + 2, y + 1, 12, 4, k.hair); R(x + 2, y + 3, 2, side, k.hair); R(x + 12, y + 3, 2, side, k.hair);
+  if (k.style === 'bun') R(x + 6, y, 4, 2, k.hair);
+  R(x + 5, y + 7, 2, 2, C.ink); R(x + 9, y + 7, 2, 2, C.ink);
+  if (k.glasses) { R(x + 4, y + 6, 4, 1, C.fog); R(x + 8, y + 6, 4, 1, C.fog); R(x + 4, y + 9, 4, 1, C.fog); R(x + 8, y + 9, 4, 1, C.fog); R(x + 4, y + 6, 1, 4, C.fog); R(x + 11, y + 6, 1, 4, C.fog); }
+  R(x + 6, y + 11, 4, talking && Math.floor(G.t * 9) % 2 ? 2 : 1, '#7a3f3f');
+};
+const textWidth = who => (who && G.LOOKS[who] ? VW - 10 - 40 : VW - 10 - 18);
+/* A speech box across the bottom (or the top). Returns true once the whole line is on screen. */
 G.caption = function (text, t, o) {
   o = o || {};
   const x = 5, w = VW - 10, h = 44, y = o.top ? 15 : VH - h - 4;
   let who = null;
-  const m = /^([A-Z0-9 .'-]{2,16}): /.exec(text);
+  const m = SPEAKER.exec(text);
   if (m) { who = m[1]; text = text.slice(m[0].length); }
+  G.said = (who ? who + ': ' : '') + text;     /* the line on screen, for tests */
+  const look = who && G.LOOKS[who], lines = G.wrap(text, textWidth(who), 'md'), total = lines.join('').length;
+  let n = G.reduced ? total : Math.floor(t * 70);
+  const full = n >= total;
   G.panel(x, y, w, h, { border: o.border || C.fog, fill: C.ink });
   if (who) {
     const ww = Math.ceil(G.tw(who, 'smb')) + 8;
@@ -386,20 +455,35 @@ G.caption = function (text, t, o) {
     G.panel(tx, ty, ww, 11, { border: o.border || C.fog, fill: o.accent || C.teal });
     T(who, tx + 4, ty + 1, C.white, { f: 'smb' });
   }
-  const lines = G.wrap(text, w - 18, 'md');
-  const total = lines.join('').length;
-  let n = G.reduced ? total : Math.floor(t * 70);
+  if (look) { R(x + 6, y + 7, 18, 18, o.border || C.fog); G.face(x + 7, y + 8, look, !full); }
   for (let i = 0; i < lines.length && i < 3; i++) {
     const s = lines[i].slice(0, Math.max(0, n));
-    T(s, x + 8, y + 4 + i * 12, C.paper, { f: 'md' });
+    T(s, x + (look ? 30 : 8), y + 4 + i * 12, C.paper, { f: 'md' });
     n -= lines[i].length;
   }
-  const full = n >= 0;
   if (full && !o.noPrompt && Math.floor(G.t * 2.5) % 2 === 0) T('>', x + w - 10, y + h - 12, C.cyan);
   return full;
 };
-/* A list of captions stepped with Right, Space or a click; Left goes back. */
-G.Beats = function (list) { this.list = list; this.i = 0; this.t = 0; this.full = false; };
+/* cut a text into pages of at most three lines, at the ends of sentences */
+G.pages = function (text) {
+  const m = SPEAKER.exec(text), who = m ? m[1] : G.mentor(), body = m ? text.slice(m[0].length) : text, width = textWidth(who);
+  const parts = body.match(/[^.?!]+[.?!]+["')]*\s*|[^.?!]+$/g) || [body], pages = [];
+  let cur = '';
+  parts.forEach(p => {
+    const next = (cur + p).trim();
+    if (cur && G.wrap(next, width, 'md').length > 3) { pages.push(cur.trim()); cur = p; } else cur = cur + p;
+  });
+  if (cur.trim()) pages.push(cur.trim());
+  return pages.map(p => who + ': ' + p);
+};
+/* A list of lines stepped with Right, Space or a click; Left goes back. A line that names its
+   speaker ("MIKA: ...") is said by that speaker; any other line is said by the floor's mentor.
+   A line can carry a `spot` [x, y, w, h]: that part of the screen is lit while it is said. */
+G.Beats = function (list) {
+  this.list = [];
+  list.forEach(b => G.pages(b.say).forEach(say => this.list.push(Object.assign({}, b, { say }))));
+  this.i = 0; this.t = 0; this.full = false;
+};
 G.Beats.prototype.cur = function () { return this.list[this.i]; };
 G.Beats.prototype.update = function (dt) {
   this.t += dt;
@@ -412,7 +496,22 @@ G.Beats.prototype.update = function (dt) {
   if (G.hit('left') && this.i > 0) { this.i--; this.t = 99; return 'prev'; }
   return null;
 };
-G.Beats.prototype.draw = function (o) { this.full = G.caption(this.cur().say, this.t, o); };
+G.Beats.prototype.draw = function (o) {
+  const b = this.cur();
+  o = Object.assign({}, o);
+  /* while somebody talks, the controls are for looking at. `free` is for a last line that
+     stays up next to live buttons. */
+  if (!o.free) G.narrating = true;
+  if (b.spot) {
+    const [x, y, w, h] = b.spot, dim = 'rgba(6,9,20,.6)';
+    R(0, 0, VW, y, dim); R(0, y + h, VW, VH - y - h, dim); R(0, y, x, h, dim); R(x + w, y, VW - x - w, h, dim);
+    const c = Math.floor(G.t * 3) % 2 ? C.amber : C.white;
+    R(x - 1, y - 1, w + 2, 1, c); R(x - 1, y + h, w + 2, 1, c); R(x - 1, y, 1, h, c); R(x + w, y, 1, h, c);
+    /* the box goes wherever the lit part is not */
+    if (o.top === undefined) o.top = y + h / 2 > VH / 2;
+  }
+  this.full = G.caption(b.say, this.t, o);
+};
 
 let toast = null;
 G.toast = function (text, secs) { toast = { text, t: 0, secs: secs || 3 }; };
@@ -426,6 +525,39 @@ function drawToast(dt) {
   T(toast.text, VW / 2, y + 2, C.amber, { a: 'center' });
 }
 
+/* ================= the job card ================= */
+/* What a game asks of the player, in plain words: the aim, then the goals it is judged on.
+   It opens only when the player asks for it (G, or a tap on GOAL in the header): the mentor has
+   already said it once. The notebook supplies the text: see book.show. */
+G.job = null;
+G.narrating = false;
+G.card = { open: false, t: 0 };
+function cardUpdate(dt) {
+  G.card.t += dt;
+  if (G.card.t > 0.25 && (G.hit('a') || G.hit('b') || G.hit('right') || G.hit('goal') || ptr.pressed)) { G.card.open = false; G.sfx('blip'); }
+}
+function drawCard() {
+  const job = G.job; if (!job) { G.card.open = false; return; }
+  R(0, 0, VW, VH, 'rgba(6,9,20,.86)');
+  const aim = G.wrap(job.aim, 236, 'md').slice(0, 3), rows = job.goals.map(g => G.wrap(g.text, 218, 'md').slice(0, 2));
+  const h = 36 + aim.length * 12 + rows.reduce((n, r) => n + r.length * 11 + 4, 0) + 16, x = 30, w = 260, y = Math.max(13, Math.round((VH - h) / 2));
+  G.panel(x, y, w, h, { border: C.amber, fill: C.ink });
+  T('THE GOAL', x + 10, y + 6, C.amber, { f: 'smb' });
+  T(job.title.toUpperCase(), x + w - 10, y + 6, C.steel, { a: 'right' });
+  let yy = y + 19;
+  aim.forEach(l => { T(l, x + 10, yy, C.white, { f: 'md' }); yy += 12; });
+  yy += 3; R(x + 8, yy, w - 16, 1, C.slate); yy += 5;
+  job.goals.forEach((g, i) => {
+    const st = G.book.states[g.id];
+    R(x + 10, yy + 2, 7, 7, st === true ? C.mint : st === false ? C.coral : C.steel);
+    if (st !== true && st !== false) R(x + 11, yy + 3, 5, 5, C.ink);
+    rows[i].forEach((l, k) => T(l, x + 24, yy + k * 11 - 1, st === false ? C.coral : st === true ? C.mint : C.paper, { f: 'md' }));
+    yy += rows[i].length * 11 + 4;
+  });
+  if (Math.floor(G.t * 2.5) % 2 === 0) T(G.kt('SPACE: BACK', 'TAP: BACK'), x + 10, y + h - 12, C.cyan);
+  T(G.kt('G OPENS THIS', 'TAP GOAL TO OPEN THIS'), x + w - 10, y + h - 12, C.steel, { a: 'right' });
+}
+
 /* ================= scenes and the loop ================= */
 let cur = null, curName = '', next = null, fade = 1, fadeDir = -1;
 G.scene = () => curName;
@@ -436,6 +568,7 @@ G.go = function (name, args) {
 function swap() {
   if (cur && cur.leave) cur.leave();
   curName = next.name; cur = G.scenes[curName];
+  G.job = null; G.card.open = false;
   cur.enter(next.args || {});
   next = null;
   if (G.book) G.book.sync();
@@ -444,7 +577,7 @@ let last = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
-  G.t += dt;
+  G.t += dt; G.dt = dt; G.frame = (G.frame || 0) + 1;
   Object.keys(queued).forEach(k => { hit[k] = true; delete queued[k]; });
   ['left', 'right', 'up', 'down'].forEach(k => {
     if (down[k]) { held[k] = (held[k] || 0) + dt; held[k + '_t'] = (held[k + '_t'] || 0) + dt; held[k + '_r'] = false; if (held[k + '_t'] > 0.06) { held[k + '_t'] = 0; held[k + '_r'] = true; } }
@@ -457,8 +590,22 @@ function frame(now) {
     if (fade <= 0) { fade = 0; fadeDir = 0; }
   }
   if (cur) {
-    if (fadeDir !== 1) cur.update(dt);
+    const modal = G.card.open && !!G.job;
+    if (fadeDir !== 1) {
+      if (modal) cardUpdate(dt);
+      else {
+        cur.update(dt);
+        if (G.job && G.hit('goal')) { G.card.open = true; G.card.t = 0; }
+      }
+    }
+    /* while the card is up or somebody is talking, the controls under it are for looking at,
+       not for pressing */
+    const mask = modal || G.narrating, keep = mask ? [ptr.x, ptr.y, ptr.pressed, ptr.released, ptr.down] : null;
+    G.narrating = false;
+    if (mask) { ptr.x = -1; ptr.y = -1; ptr.pressed = false; ptr.released = false; ptr.down = false; }
     cur.draw();
+    if (mask) { ptr.x = keep[0]; ptr.y = keep[1]; ptr.pressed = keep[2]; ptr.released = keep[3]; ptr.down = keep[4]; }
+    if (modal) drawCard();
   }
   drawToast(dt);
   if (fade > 0) { ctx.globalAlpha = Math.min(1, fade); R(0, 0, VW, VH, C.ink); ctx.globalAlpha = 1; }

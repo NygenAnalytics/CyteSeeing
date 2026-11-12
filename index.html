@@ -69,7 +69,6 @@ body {
 }
 #screen:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .keys { margin: 0; color: var(--muted); text-align: center; text-wrap: balance; font-size: 13px; }
-.keys kbd { font-family: var(--mono); font-size: 11px; color: var(--fg); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; background: var(--panel); }
 /* touch controls: a row under the screen when the phone is upright, a thumb pad on each side when it is sideways */
 .pad, .side, .turn { display: none; }
 .pad { gap: 8px; width: 100%; max-width: 420px; grid-template-columns: 1fr 1fr .85fr .85fr 1.5fr; }
@@ -204,7 +203,7 @@ span.p { display: inline-block; height: auto; }
         <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
       </div>
       <p class="turn">Tap things to walk to them and poke them. Turn your phone sideways for a bigger screen.</p>
-      <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> walk and adjust · <kbd>Space</kbd> act · <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a control · <kbd>Esc</kbd> leave a room · <kbd>M</kbd> sound</p>
+      <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> walk and adjust · <kbd>Space</kbd> act · <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a control · <kbd>Esc</kbd> leave a room · <kbd>G</kbd> the goal · <kbd>L</kbd> floors · <kbd>M</kbd> sound</p>
     </div>
 
     <aside class="book" aria-label="Lab notebook and terminal">
@@ -247,6 +246,13 @@ span.p { display: inline-block; height: auto; }
 <script src="js/soup.js"></script>
 <script src="js/doublets.js"></script>
 <script src="js/review.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/norm.js"></script>
+<script src="js/hvg.js"></script>
+<script src="js/pca.js"></script>
+<script src="js/knn.js"></script>
+<script src="js/umap.js"></script>
+<script src="js/club.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

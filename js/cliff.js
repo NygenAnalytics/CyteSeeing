@@ -14,14 +14,29 @@ const SOUP = [6, 5, 4, 4, 3, 3, 2, 2];
 const sx = rank => PX + Math.log10(Math.max(1, rank)) / LX * PW;
 const sy = umi => PY + PH - Math.log10(Math.max(1, umi)) / LY * PH;
 
+/* Mika's walk through the plot. On the second line the barcodes slide into rank order. */
 const INTRO = [
-  { say: 'The sequencer is done. Every read carries a barcode. But there are far more barcodes than cells.' },
-  { say: 'Rank every barcode by its UMI count. Real cells form the plateau. Then a cliff. Then the background.' },
-  { say: 'The background is empty droplets. Each held a bead but no cell, and still caught a little stray RNA.' },
-  { say: 'Draw the line. Everything left of it counts as a cell. Keep 97% of the real cells. Let in 1% empty droplets at most.' },
+  { say: 'The sequencer is done. Every read carries the barcode of its droplet. But most droplets never held a cell.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Here every barcode is ranked by its UMI count: the RNA molecules counted for it. Cells are the flat part on the left.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Then the counts fall off a cliff. After it come empty droplets, which still caught some free-floating RNA.' },
+  { say: 'Move the line. Everything left of it is called a cell. Keep 97% of the real cells, and let in 1% empty droplets at most.' },
+];
+const TEST_TOUR = [
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'This works like EmptyDrops. Barcodes at or below LOWER are taken as empty. They show what background RNA looks like.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Barcodes between the two lines are tested against that background. Above the KNEE they are kept without a test.' },
+  { spot: [0, 130, VW, 50], say: 'Set LOWER and FDR. A smaller FDR is stricter: fewer empty droplets get in, but small cells can fail. Then press RUN TEST.' },
 ];
 
-let phase, beats, pt, actors, total, gi, sel, li, fi, stats, scan, lastSync, rsel, laneR, laneDbl;
+let phase, beats, pt, actors, total, gi, sel, li, fi, stats, scan, lastSync, rsel, laneR, laneDbl, tour;
+
+function verdict() {
+  const s = stats, got = 'You kept ' + Math.round(s.recall * 100) + '% of the real cells and let in ' + (s.empties * 100).toFixed(1) + '% empty droplets. ';
+  if (s.stars === 3) return got + 'The test found the small cells that every line lost.';
+  if (s.pool) return got + 'LOWER is too high. Real cells at or below it were taken as empty, and nothing down there can be called. Lower it.';
+  if (!s.okE) return got + 'Too many empty droplets got in. Choose a smaller FDR.';
+  if (!s.stars) return got + 'The test is too strict, and small cells failed it. Choose a slightly larger FDR.';
+  return got + 'That passes. A slightly different LOWER or FDR would keep a few more cells.';
+}
 
 function build() {
   const rnd = G.rng(7), ld = G.state.load;
@@ -93,16 +108,16 @@ function showBook() {
   const num = (k, w) => '<input class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" type="number" inputmode="numeric" aria-label="' + k + '">';
   const pick = (k, w, vals) => '<select class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" aria-label="' + k + '">' + vals.map(v => '<option value="' + v + '">' + v + '</option>').join('') + '</select>';
   G.book.show({
-    floor: 'Ground floor · Room 1-2', room: 'The Cliff', codeFirst: true, file: 'js/cliff.js',
+    floor: 'Ground floor · Room 1-2', room: 'The Cliff', aim: 'Decide which barcodes are real cells and which are empty droplets.', codeFirst: true, file: 'js/cliff.js',
     goals: [
       { id: 'recall', text: 'Keep at least 97% of the real cells' },
       { id: 'empty', text: 'Let in 1% empty droplets at most' },
     ],
     notes: [
-      { id: 'c-rank', open: true, html: 'Rank every barcode by its UMI count. Cells form the <b>plateau</b>, then a <b>cliff</b> drops to the background: empty droplets that caught stray RNA.' },
-      { id: 'c-line', html: 'A UMI cut-off either loses small cells with little RNA, or lets soupy empty droplets in. <b>No single line avoids both.</b>' },
-      { id: 'c-ed', html: '<b>EmptyDrops</b>: barcodes at or below <b>lower</b> define the soup. Every barcode above it is tested against that profile. Barcodes above the <b>knee</b> are kept without a test.' },
-      { id: 'c-after', html: 'Cell calling does not remove stray RNA from the called cells, and it does not find doublets. Those are separate steps: rooms 1-4 and 1-5.' },
+      { id: 'c-rank', open: true, html: 'Rank every barcode by its UMI count. Cells form the flat part on the left, the <b>plateau</b>. Then a <b>cliff</b> drops to the background: empty droplets that picked up free-floating RNA.' },
+      { id: 'c-line', html: 'A cut-off on the UMI count either loses small cells that contain little RNA, or lets in empty droplets that picked up free-floating RNA. <b>No single cut-off avoids both.</b>' },
+      { id: 'c-ed', html: '<b>EmptyDrops</b>: barcodes at or below <b>lower</b> are assumed to be empty and define the background RNA. Every barcode above it is tested against that background. Barcodes above the <b>knee</b> are kept without a test.' },
+      { id: 'c-after', html: 'Cell calling does not remove ambient RNA from the called cells, and it does not find doublets. Those are separate steps: rooms 1-4 and 1-5.' },
     ],
     term: {
       title: 'Same step, in code',
@@ -166,13 +181,14 @@ function callCut() {
   G.book.goal('recall', stats.okR); G.book.goal('empty', stats.okE);
   G.book.unlock('c-line');
   beats = new G.Beats([
-    { say: 'You kept ' + Math.round(stats.recall * 100) + '% of the real cells and let in ' + (stats.empties * 100).toFixed(1) + '% empty droplets. The goal is 97% and 1%.' },
-    { say: 'No line gets there. Small cells with little RNA sit below the cliff, among empty droplets that soaked up stray RNA.' },
-    { say: 'A count cannot tell them apart. So look inside each barcode: does its RNA look like the soup, or like a cell?' },
+    { say: 'You kept ' + Math.round(stats.recall * 100) + '% of the real cells and let in ' + (stats.empties * 100).toFixed(1) + '% empty droplets. No line gets both right.' },
+    { say: 'Small cells hold little RNA. They sit below the cliff, next to empty droplets that caught free-floating RNA.' },
+    { say: 'A count cannot tell them apart. Their RNA can: an empty droplet holds the background mix. A cell does not.' },
   ]);
   G.sfx(stats.stars ? 'ok' : 'bad');
 }
 function goTest() {
+  if (!G.state.notes['c-ed']) tour = new G.Beats(TEST_TOUR);
   phase = 'test'; sel = 2; actors.forEach(o => { o.called = false; o.seen = false; });
   ['recall', 'empty'].forEach(g => G.book.goal(g, null));
   G.book.unlock('c-ed');
@@ -204,7 +220,7 @@ G.scenes.cliff = {
   phase: () => phase,
   enter() {
     build();
-    gi = 60; li = 2; fi = 2; sel = 0; pt = 0; lastSync = null; stats = null; scan = null; rsel = 0;
+    gi = 60; li = 2; fi = 2; sel = 0; pt = 0; lastSync = null; stats = null; scan = null; rsel = 0; tour = null;
     beats = new G.Beats(INTRO);
     phase = G.state.tries.cliff > 0 ? (G.state.notes['c-ed'] ? 'test' : 'cut') : 'intro';
     if (phase === 'test') sel = 2;
@@ -228,13 +244,15 @@ G.scenes.cliff = {
       }
       if (G.hit('a')) callCut();
       if (G.ptr.pressed && G.over(2, 10, 22, 12)) { G.toast('UMI: UNIQUE MOLECULAR IDENTIFIER. COUNT IT ONCE.', 3.5); G.sfx('pop'); }
-      if (G.ptr.pressed && G.over(50, 122, 160, 8)) { G.toast(G.fmt(total) + ' BARCODES. MOST OF THEM ARE BLUFFING.', 3.5); G.sfx('pop'); }
+      if (G.ptr.pressed && G.over(50, 122, 160, 8)) { G.toast(G.fmt(total) + ' BARCODES. MOST OF THEM ARE EMPTY DROPLETS.', 3.5); G.sfx('pop'); }
     } else if (phase === 'cutres') {
       if (beats) { if (beats.update(dt) === 'done') { beats = null; rsel = 1; } }
       else {
         if (G.hit('left') || G.hit('right')) { rsel = 1 - rsel; G.sfx('tick'); }
         if (G.hit('a')) { if (rsel === 1) goTest(); else goCut(); }
       }
+    } else if (phase === 'test' && tour) {
+      if (tour.update(dt) === 'done') tour = null;
     } else if (phase === 'test') {
       if (G.hit('up')) sel = (sel + 2) % 3;
       if (G.hit('down')) sel = (sel + 1) % 3;
@@ -254,8 +272,8 @@ G.scenes.cliff = {
       }
       if (scan.i >= scan.list.length) endScan();
     } else if (phase === 'result') {
-      if (G.hit('left') || G.hit('right')) { rsel = 1 - rsel; G.sfx('tick'); }
-      if (G.hit('a')) { if (rsel === 1 && stats.stars) keep(); else goTest(); }
+      const r = G.resultKeys(rsel, stats.stars > 0); rsel = r.rsel;
+      if (r.act === 'keep') keep(); else if (r.act === 'retry') goTest();
     }
     sync();
   },
@@ -292,7 +310,7 @@ function drawPlot() {
     T('KNEE', PX + 3, yk - 10, C.mint);
     if (yl - yk > 11) T('TESTED', PX + PW - 3, Math.round((yk + yl) / 2) - 4, C.lilac, { a: 'right' });
     if (yl - yk > 22) T('LOWER', PX + 3, yl - 10, C.lilac);
-    if (PY + PH - yl > 12) T('THE SOUP', PX + 3, yl + 2, C.mist);
+    if (PY + PH - yl > 12) T('ASSUMED EMPTY', PX + 3, yl + 2, C.mist);
   }
   if (phase === 'cut' || phase === 'cutres') {
     const gx = Math.round(gi >= actors.length ? PX + PW : gi <= 0 ? PX : (actors[gi - 1].x + actors[gi].x) / 2);
@@ -353,7 +371,7 @@ function drawSide() {
   }
   if (phase === 'test' || phase === 'scan') {
     const o = phase === 'scan' && scan.i > 0 ? scan.list[Math.min(scan.i, scan.list.length) - 1] : null;
-    T('THE SOUP', x + 6, 20, C.mist);
+    T('BACKGROUND RNA', x + 6, 20, C.mist);
     bars(x + 6, 30, SOUP, C.steel);
     T(o ? 'THIS BARCODE' : 'A BARCODE', x + 6, 58, C.mist);
     if (o) {
@@ -363,7 +381,7 @@ function drawSide() {
       T(G.fmt(o.umi) + ' UMI', x + 6, 110, C.steel);
     } else {
       bars(x + 6, 68, [0, 0, 0, 0, 0, 0, 0, 0], C.slate);
-      T('SAME SHAPE', x + 6, 100, C.steel); T('AS THE SOUP?', x + 6, 110, C.steel);
+      T('SAME MIX AS THE', x + 6, 100, C.steel); T('BACKGROUND?', x + 6, 110, C.steel);
     }
     return;
   }
@@ -396,18 +414,17 @@ function bars(x, y, vals, col) {
 
 function drawStrip() {
   const y0 = 130;
-  if (phase === 'intro') { beats.draw(); return; }
-  if (phase === 'cutres' && beats) { beats.draw(); return; }
   R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.slate);
-  if (phase === 'cut') {
-    T(G.kt('DRAG THE LINE, OR USE THE ARROW KEYS.', 'DRAG THE LINE ACROSS THE PLOT.'), 10, y0 + 8, C.fog);
-    T('LEFT OF THE LINE COUNTS AS A CELL. THEN CALL THE CELLS.', 10, y0 + 19, C.mist);
-    T('GOAL', 10, y0 + 34, C.amber, { f: 'smb' });
-    T('KEEP 97% OF REAL CELLS.  1% EMPTIES AT MOST.', 44, y0 + 34, C.amber);
+  if (phase === 'cut' || phase === 'intro') {
+    T('EVERYTHING LEFT OF THE LINE WILL BE CALLED A CELL.', 10, y0 + 8, C.fog);
+    T('GOAL', 10, y0 + 28, C.amber, { f: 'smb' });
+    T('KEEP 97% OR MORE OF THE REAL CELLS.', 44, y0 + 24, C.amber); T('LET IN 1% EMPTY DROPLETS AT MOST.', 44, y0 + 34, C.amber);
+    if (phase === 'intro') beats.draw();
   } else if (phase === 'cutres') {
-    T('NO LINE REACHES THE GOAL. WHAT NOW?', 10, y0 + 8, C.fog);
-    if (G.button('again', 10, y0 + 24, 110, 15, 'MOVE THE LINE AGAIN', { focus: rsel === 0 })) goCut();
-    if (G.button('inside', 132, y0 + 24, 150, 15, 'LOOK INSIDE THE BARCODES', { primary: true, focus: rsel === 1 })) goTest();
+    T('A LINE CANNOT REACH BOTH GOALS.', 10, y0 + 8, C.fog);
+    if (G.button('again', 10, y0 + 24, 124, 15, 'MOVE THE LINE AGAIN', { focus: rsel === 0 })) goCut();
+    if (G.button('inside', 146, y0 + 24, 136, 15, 'TEST EACH BARCODE', { primary: true, focus: rsel === 1 })) goTest();
+    if (beats) beats.draw();
   } else if (phase === 'test') {
     T('LOWER', 14, y0 + 7, sel === 0 ? C.white : C.mist);
     LOWERS.forEach((v, i) => { if (opt('lo' + i, 58 + i * 32, y0 + 4, String(v), i === li)) { li = i; sel = 0; } });
@@ -415,21 +432,15 @@ function drawStrip() {
     FDRS.forEach((v, i) => { if (opt('fd' + i, 58 + i * 32, y0 + 20, FDR_LABEL[i], i === fi)) { fi = i; sel = 1; } });
     if (sel < 2 && Math.floor(G.t * 3) % 2 === 0) T('>', 6, y0 + 7 + sel * 16, C.cyan);
     if (G.button('test', 256, y0 + 4, 58, 28, 'RUN TEST', { primary: true, focus: sel === 2 })) runTest();
-    T('AT OR BELOW LOWER: THE SOUP.  ABOVE THE KNEE: KEPT.', 14, y0 + 38, C.steel);
+    T('AT OR BELOW LOWER: ASSUMED EMPTY.  ABOVE KNEE: KEPT.', 14, y0 + 38, C.steel);
+    if (tour) tour.draw();
   } else if (phase === 'scan') {
     T('TESTING BARCODE ' + Math.min(scan.i + 1, scan.list.length) + ' OF ' + scan.list.length, 14, y0 + 8, C.white, { f: 'smb' });
     R(14, y0 + 22, 240, 6, C.slate); R(14, y0 + 22, Math.round(240 * scan.i / Math.max(1, scan.list.length)), 6, C.lilac);
     T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, y0 + 36, C.steel, { a: 'right' });
   } else if (phase === 'result') {
-    const s = stats;
-    let msg;
-    if (s.stars === 3) msg = 'The test found the small cells that every line lost, and kept the soup out.';
-    else if (s.pool) msg = 'Your soup pool swallowed real cells. Nothing at or below LOWER is ever called.';
-    else if (!s.okE) msg = 'A loose FDR let empty droplets in. They will form a junk cluster later.';
-    else msg = 'Too strict. Small cells failed the test. Loosen the FDR a little.';
-    G.wrap(msg, 300, 'md').slice(0, 2).forEach((l, i) => T(l, 10, y0 + 3 + i * 11, C.paper, { f: 'md' }));
-    if (G.button('retest', 10, y0 + 29, 96, 15, 'CHANGE THE TEST', { focus: rsel === 0 || !s.stars })) goTest();
-    if (s.stars && G.button('keepc', 176, y0 + 29, 134, 15, 'KEEP THESE CELLS', { primary: true, focus: rsel === 1 })) keep();
+    const act = G.resultDraw(y0, verdict(), stats.stars > 0, rsel, 'CHANGE THE TEST', 'KEEP THESE CELLS');
+    if (act === 'keep') keep(); else if (act === 'retry') goTest();
   }
 }
 function opt(id, x, y, label, on) {

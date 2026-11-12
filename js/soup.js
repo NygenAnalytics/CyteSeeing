@@ -15,11 +15,18 @@ const SOUP = [20, 14, 10, 34, 12, 48];
 const MX = 62, MYT = 34, CW = 21, CH = 16;
 
 const INTRO = [
-  { say: 'Cells that burst before loading spill their RNA into the liquid. That is the soup, and every droplet gets a ladle.' },
-  { say: 'So each cell reports a little of everybody\'s genes. Monocyte LYZ in your T cells. Haemoglobin in everything.' },
-  { say: 'The empty droplets from the Cliff give you the recipe. They cannot tell you how much soup is in each cell.' },
-  { say: 'Find the soup share and subtract it. Hint: the red cells all burst. Nothing left in here can make haemoglobin.' },
+  { say: 'Some cells burst before loading. Their RNA floats free and gets into every droplet. That is ambient RNA: the soup.' },
+  { spot: [4, 14, 190, 114], say: 'So every cell shows a little of genes it cannot make. Big squares are real expression. Small ones may be soup.' },
+  { spot: [198, 14, 118, 62], say: 'The empty droplets show what is in the soup: these bars. They do not show how much of each cell is soup.' },
+  { spot: [0, 130, VW, 50], say: 'Find that share. Pick a gene in a cell type that cannot make it, like haemoglobin, HBB. Then remove that much.' },
 ];
+function verdict() {
+  const nums = ' You removed ' + rho + '%. The real share was ' + truth + '%.';
+  if (res.stars === 3) return 'The soup is gone, and the real expression is still there, even the quiet genes.' + nums;
+  if (res.under) return 'Not enough. Cells still show genes they cannot make, like haemoglobin in T cells.' + nums;
+  return 'Too much. The soup is gone, but so is real expression that happened to be low.' + nums;
+}
+
 
 let phase, beats, pt, rho, truth, obs, cur, focus, rsel, res, lastSync, laneR, probed;
 
@@ -35,10 +42,10 @@ const side = v => (v < 0.3 ? 0 : Math.min(12, Math.round(2 * (1 + 2.3 * Math.log
 /* what one square says about the soup share, and how far to trust it */
 function probe(r, c) {
   const est = obs[r][c] / SOUP[c] * 100, real = REAL[r][c];
-  if (real >= 50) return { est, use: false, tag: 'A BAD PROBE', why: ['THIS GENE BELONGS', 'TO THIS CELL TYPE'] };
-  if (real > 0) return { est, use: true, tag: 'ODD ONE OUT', why: ['ABOVE THE OTHERS.', 'SOMETHING IS REAL'] };
+  if (real >= 50) return { est, use: false, tag: 'NOT A PROBE', why: ['THIS CELL TYPE', 'MAKES THIS GENE'] };
+  if (real > 0) return { est, use: true, tag: 'PARTLY REAL', why: ['HIGHER THAN THE', 'OTHER PROBES'] };
   if (c === 5) return { est, use: true, tag: 'BEST PROBE', why: ['NO CELL IN HERE', 'MAKES HAEMOGLOBIN'] };
-  if (SOUP[c] < 13) return { est, use: true, tag: 'SHAKY PROBE', why: ['FEW COUNTS: THE', 'ESTIMATE WOBBLES'] };
+  if (SOUP[c] < 13) return { est, use: true, tag: 'WEAK PROBE', why: ['FEW COUNTS: THE', 'ESTIMATE IS NOISY'] };
   return { est, use: true, tag: 'GOOD PROBE', why: ['THIS CELL TYPE', 'CANNOT MAKE IT'] };
 }
 
@@ -53,16 +60,16 @@ function sync() {
 function showBook() {
   const num = w => '<input class="p" data-p="rho" id="s-rho-' + w + '" type="number" step="0.01" min="0" max="0.4" inputmode="decimal" aria-label="soup share">';
   G.book.show({
-    floor: 'Ground floor · Room 1-4', room: 'The soup kitchen', codeFirst: true, file: 'js/soup.js',
+    floor: 'Ground floor · Room 1-4', room: 'The soup kitchen', aim: 'Work out how much of every cell is soup, and take exactly that much away.', codeFirst: true, file: 'js/soup.js',
     goals: [
       { id: 'near', text: 'Get within 2 points of the real soup share' },
-      { id: 'ghost', text: 'Leave no gene in a cell that cannot make it' },
-      { id: 'real', text: 'Do not erase real signal' },
+      { id: 'ghost', text: 'Leave no gene in a cell type that cannot make it' },
+      { id: 'real', text: 'Do not remove real expression' },
     ],
     notes: [
       { id: 's-what', open: true, html: 'Ambient RNA, <b>the soup</b>, comes from cells that lysed before or during loading. Every droplet holds some, so every cell shows a low level of genes it does not express.' },
-      { id: 's-probe', html: 'To measure the soup share, use genes a cell <b>cannot</b> express: haemoglobin in white blood cells, immunoglobulins in T cells. Every such count came from the soup.' },
-      { id: 's-over', html: 'Correction subtracts each cell\'s share of the soup profile. <b>Too much removes real genes that are quietly expressed.</b> Check a few known markers before and after.' },
+      { id: 's-probe', html: 'To measure the share of ambient RNA, use genes that a cell type <b>cannot</b> express, such as haemoglobin in white blood cells or immunoglobulins in T cells. Every such count came from the ambient RNA.' },
+      { id: 's-over', html: 'Correction subtracts each cell\'s share of the ambient profile. <b>Removing too much also removes real expression of genes that are expressed at a low level.</b> Check a few known marker genes before and after.' },
       { id: 's-tools', html: 'Tools: <b>SoupX</b> estimates the share from marker genes and clusters. <b>CellBender</b> and <b>DecontX</b> model it for each cell.' },
     ],
     term: {
@@ -172,20 +179,18 @@ G.scenes.soup = {
     R(0, 0, VW, VH, '#0b1122');
     drawGrid(); drawSide();
     G.roomHeader('1-4  SOUP KITCHEN', C.mint, true);
-    if (phase === 'intro') { beats.draw(); return; }
-    if (phase === 'set') {
+    if (phase === 'set' || phase === 'intro') {
       G.strip(130);
-      T('SOUP SHARE TO REMOVE', 14, 136, focus === 'slider' ? C.white : C.mist);
+      T('AMBIENT SHARE TO REMOVE', 14, 136, focus === 'slider' ? C.white : C.mist);
       rho = G.slider('rho', 14, 152, 190, rho, 0, 40, 1, { focus: focus === 'slider', c: C.mint });
       T(rho + '%', 246, 147, C.mint, { a: 'right', f: 'lg' });
       /* take the estimate from the square under the cursor */
       const p = probe(cur.r, cur.c);
       if (G.button('use', 14, 163, 150, 13, 'USE THIS PROBE: ' + Math.min(999, Math.round(p.est)) + '%', { disabled: !p.use, focus: focus === 'grid' })) useEstimate();
       if (G.button('fix', 256, 134, 58, 28, 'CORRECT', { primary: true, focus: focus === 'slider' })) correct();
+      if (phase === 'intro') beats.draw();
     } else {
-      const msg = res.stars === 3 ? 'The ghosts are gone and the quiet real signal survived. Soup removed.'
-        : res.under ? 'Not enough. Your T cells still express haemoglobin, and an annotator will believe them.'
-        : 'Too much. The ghosts are gone, and so is real signal that happened to be quiet.';
+      const msg = verdict();
       const act = G.resultDraw(130, msg, res.stars > 0, rsel, 'CHANGE THE SHARE', 'KEEP THIS MATRIX');
       if (act === 'keep') keep(); else if (act === 'retry') retry();
     }
@@ -212,15 +217,15 @@ function drawGrid() {
     const x = MX + cur.c * CW, y = MYT + cur.r * CH;
     R(x - 1, y - 1, CW + 1, 1, C.white); R(x - 1, y + CH - 1, CW + 1, 1, C.white); R(x - 1, y, 1, CH - 1, C.white); R(x + CW - 1, y, 1, CH - 1, C.white);
   }
-  const cap = phase === 'result' ? ['RED RING: A GHOST IS LEFT', 'AMBER RING: REAL SIGNAL LOST']
-    : phase === 'intro' ? ['BIG SQUARE: A REAL MARKER', 'SMALL SQUARE: A GHOST?'] : ['COUNTS PER 1,000 COUNTS', 'SQUARES SHRINK AS SOUP GOES'];
+  const cap = phase === 'result' ? ['RED RING: AMBIENT RNA LEFT IN', 'AMBER RING: REAL SIGNAL LOST']
+    : phase === 'intro' ? ['LARGE SQUARE: REAL EXPRESSION', 'SMALL SQUARE: MAYBE AMBIENT RNA'] : ['COUNTS PER 1,000 COUNTS', 'SQUARES SHRINK AS YOU REMOVE MORE'];
   T(cap[0], 99, 104, C.steel, { a: 'center' }); T(cap[1], 99, 114, C.steel, { a: 'center' });
 }
 
 function drawSide() {
   const x = 198, w = 118;
   G.panel(x, 14, w, 114, { border: C.slate, fill: '#0e1630' });
-  T('THE SOUP', x + 6, 18, C.mist);
+  T('AMBIENT RNA', x + 6, 18, C.mist);
   /* a small pot, simmering */
   R(x + 88, 20, 20, 9, '#51648f'); R(x + 86, 19, 24, 2, C.fog); R(x + 90, 21, 16, 2, '#96708a');
   for (let i = 0; i < 3; i++) { const k = (G.t * 0.9 + i * 0.33) % 1; R(x + 92 + i * 5, 17 - k * 6, 1, 2, 'rgba(255,255,255,' + (0.5 - k * 0.5).toFixed(2) + ')'); }
@@ -234,7 +239,7 @@ function drawSide() {
   if (phase === 'result') {
     T('REAL SHARE', x + 6, 76, C.mist); T(truth + '%', x + w - 6, 76, C.white, { a: 'right', f: 'smb' });
     T('YOU REMOVED', x + 6, 88, C.mist); T(rho + '%', x + w - 6, 88, res.err <= 2 ? C.mint : C.coral, { a: 'right', f: 'smb' });
-    T('GHOSTS LEFT', x + 6, 100, C.mist); T(String(res.ghosts), x + w - 6, 100, res.ghosts ? C.coral : C.mint, { a: 'right', f: 'smb' });
+    T('AMBIENT LEFT IN', x + 6, 100, C.mist); T(String(res.ghosts), x + w - 6, 100, res.ghosts ? C.coral : C.mint, { a: 'right', f: 'smb' });
     G.stars(x + 6, 114, res.stars);
     if (res.erased) T('SIGNAL LOST', x + w - 6, 114, C.amber, { a: 'right' });
     return;
@@ -243,7 +248,7 @@ function drawSide() {
   T(GENES[cur.c] + ' IN ' + ROWS[cur.r], x + 6, 63, C.white);
   T('SEEN ' + obs[cur.r][cur.c].toFixed(1) + '   SOUP ' + SOUP[cur.c], x + 6, 73, C.mist);
   T('SAYS ' + (p.est > 99 ? Math.round(p.est) + '%?!' : Math.round(p.est) + '%'), x + 6, 85, p.use ? C.white : C.coral, { f: 'smb' });
-  T(p.tag, x + 6, 97, p.use && p.tag !== 'ODD ONE OUT' ? C.mint : C.amber, { f: 'smb' });
+  T(p.tag, x + 6, 97, p.use && p.tag !== 'PARTLY REAL' ? C.mint : C.amber, { f: 'smb' });
   T(p.why[0], x + 6, 108, C.steel); T(p.why[1], x + 6, 117, C.steel);
 }
 })();

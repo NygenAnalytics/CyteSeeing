@@ -6,20 +6,20 @@ const { R, T, C, VW, VH } = G;
 
 const QS = [
   { q: 'You wanted more cells. Why not load 20,000 of them into one lane?', a: 0,
-    o: ['DOUBLETS RISE WITH EVERY CELL YOU LOAD', 'THE CHIP WOULD OVERFLOW', 'CELLS GET SHY IN A CROWD'],
-    no: 'Wrong. The doublet rate climbs with the load, about 0.8% per 1,000 cells. Split it across lanes.' },
+    o: ['THE DOUBLET RATE RISES WITH EVERY CELL YOU LOAD', 'THE CHIP CANNOT HOLD THAT MANY CELLS', 'CELLS DIE WHEN THEY ARE PACKED TOGETHER'],
+    why: 'The doublet rate rises with the load: about 0.8% per 1,000 cells. Split the cells across lanes.' },
   { q: 'A barcode has 300 UMIs. Is it a cell, or an empty droplet?', a: 2,
-    o: ['EMPTY. THAT IS TOO FEW.', 'A CELL. IT HAS A BARCODE.', 'DEPENDS. DOES ITS RNA LOOK LIKE THE SOUP?'],
-    no: 'Wrong. A count cannot say. Small cells and soupy empty droplets overlap. Test the RNA profile.' },
+    o: ['EMPTY. 300 IS TOO FEW FOR A CELL.', 'A CELL. IT HAS A BARCODE AND COUNTS.', 'IT DEPENDS. DOES ITS RNA LOOK LIKE THE BACKGROUND?'],
+    why: 'A count cannot decide. Small cells and empty droplets overlap. Test whether the RNA looks like the background.' },
   { q: 'Why did you not simply remove every cell above 5% mitochondrial reads?', a: 1,
-    o: ['FIVE IS AN UNLUCKY NUMBER', 'IT DEPENDS ON THE TISSUE AND THE DATA', 'MITOCHONDRIA ARE THE POWERHOUSE OF THE CELL'],
-    no: 'Wrong. Thresholds do not travel between tissues. Read them off your data, and stay lenient.' },
+    o: ['A HIGH MITOCHONDRIAL SHARE IS ALWAYS HEALTHY', 'THE THRESHOLD DEPENDS ON THE TISSUE AND THE DATA', 'MITOCHONDRIAL READS ARE REMOVED LATER ANYWAY'],
+    why: 'Thresholds do not transfer between tissues. Read them off your own data, and keep them lenient.' },
   { q: 'Your T cells express haemoglobin. Explain yourself.', a: 1,
-    o: ['A NEW CELL TYPE. STRAIGHT TO NATURE.', 'AMBIENT RNA FROM BURST RED CELLS', 'THE T CELLS WERE TIRED'],
-    no: 'Wrong. That is the soup: RNA from lysed cells, in every droplet. Measure its share and subtract it.' },
+    o: ['IT IS A NEW TYPE OF T CELL', 'IT IS AMBIENT RNA FROM BURST RED BLOOD CELLS', 'STRESSED T CELLS MAKE SOME HAEMOGLOBIN'],
+    why: 'That is ambient RNA from burst red blood cells. It is in every droplet. Estimate its share and subtract it.' },
   { q: 'A small cluster shows T cell and monocyte genes together. What is it?', a: 0,
-    o: ['PROBABLY DOUBLETS. CHECK BEFORE NAMING IT.', 'A MONOCYTE-LIKE T CELL. NAME IT.', 'A BATCH EFFECT'],
-    no: 'Wrong. Two lineages in one cluster usually means two cells in one droplet. Flag it, then check.' },
+    o: ['PROBABLY DOUBLETS. CHECK BEFORE NAMING IT.', 'A NEW CELL TYPE WITH BOTH PROGRAMMES', 'A BATCH EFFECT'],
+    why: 'Two lineages in one cluster usually means two cells in one droplet. Check for doublets first.' },
 ];
 const YES = ['Hm. Acceptable.', 'Fine.', 'I suppose that is correct.', 'Irritatingly, yes.', 'Correct. Do not get used to it.'];
 const HERO = { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, shirt: C.cyan, pants: '#2c3a5e', shoes: C.ink };
@@ -35,7 +35,7 @@ function record() {
 }
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · The last door', room: 'Reviewer 2', methods: true, file: 'js/review.js', fileText: 'edit the questions', fileTail: ' if one of them is unfair.',
+    floor: 'Ground floor · The last door', room: 'Reviewer 2', aim: 'Show Reviewer 2 that you know why you did what you did.', methods: true, file: 'js/review.js', fileText: 'edit the questions', fileTail: ' if one of them is unfair.',
     goals: [{ id: 'three', text: 'Answer at least 3 of the 5 questions' }, { id: 'five', text: 'Answer all 5 for a clean accept' }],
     notes: [
       { id: 'r-hint', open: true, html: 'Everything Reviewer 2 asks was answered in a room on this floor. The right answer is the reasoning, not the number.' },
@@ -47,7 +47,8 @@ function showBook() {
 function answer(i) {
   pick = i; phase = 'reply';
   if (i === QS[qi].a) { right++; G.sfx('ok'); } else { hearts--; flash = G.t; G.sfx('bad'); }
-  beats = new G.Beats([{ say: 'REVIEWER 2: ' + (i === QS[qi].a ? YES[qi] : QS[qi].no) }]);
+  const ok = i === QS[qi].a;
+  beats = new G.Beats([{ say: 'REVIEWER 2: ' + (ok ? YES[qi] : 'Wrong.') + ' ' + QS[qi].why }]);
 }
 function next() {
   if (hearts <= 0 || qi === QS.length - 1) { finish(); return; }
@@ -110,7 +111,7 @@ G.scenes.review = {
       T('DECISION', 50, 20, C.mist); T(verdict.title, 50, 31, verdict.stars ? C.mint : C.coral, { f: 'smb' });
       if (verdict.stars) G.stars(244, 33, verdict.stars);
       T(right + ' OF 5', 270, 20, C.steel, { a: 'right' });
-      beats.draw({ border: C.coral, accent: '#8a2f3a', noPrompt: true });
+      beats.draw({ border: C.coral, accent: '#8a2f3a', noPrompt: true, free: true });
       const y = 112;
       if (G.button('rv-a', 12, y, 110, 15, 'FACE REVIEW AGAIN', { focus: rsel === 0 || !verdict.stars })) restart();
       if (verdict.stars && G.button('rv-b', 168, y, 140, 15, 'TAKE THE PAPER AND GO', { primary: true, focus: rsel === 1 })) leave();

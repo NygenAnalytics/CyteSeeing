@@ -14,13 +14,21 @@ const CL = [
 const NAMES = [['T', 12, 18, 'left'], ['B', 186, 18, 'right'], ['MONO', 186, 116, 'right'], ['NK', 12, 116, 'left']];
 
 const INTRO = [
-  { say: 'Remember the doublets from room 1-1? They were called as cells. They passed QC. They are in this room.' },
-  { say: 'A doublet of two different cell types carries both sets of genes. On the map it lands between two clusters.' },
-  { say: 'So make some on purpose. Add two random cells together, many times over, and see where the fakes land.' },
-  { say: 'Then score each real cell: how many of its neighbours are fakes? Remove the high scorers. Spare the innocent.' },
+  { spot: [EX - 1, EY - 1, EW + 2, EH + 2], say: 'The doublets from room 1-1 are still in here. On this map, similar cells sit together.' },
+  { spot: [EX - 1, EY - 1, EW + 2, EH + 2], say: 'A doublet of two cell types carries both sets of genes. So it lands between two groups.' },
+  { spot: [0, 130, VW, 50], say: 'To find them, make artificial doublets from random pairs of cells, and see where they land.' },
 ];
+const SCORE = 'Each cell now has a score: the share of its neighbours that are artificial. Set the cut-off so it takes the cells between groups. Then press REMOVE.';
+function verdict() {
+  if (res.stars === 3) return res.missed ? 'The doublets between cell types are out, and no real cells went with them. The ' + res.missed + ' still in are mostly two cells of the same type. Nobody can find those.'
+    : 'Every doublet this method can find is out, and no real cells went with them.';
+  if (!res.okF) return res.tr ? 'You removed real cells. Some were in transition between two cell types. They sit between groups too, but they are not doublets. Raise the cut-off.'
+    : 'The cut-off is too low. You removed real cells from inside healthy groups. Raise it.';
+  return 'The cut-off is too high. Doublets are still in, and could later pass for a new cell type. Lower it.';
+}
 
-let phase, beats, pt, cells, ghosts, thr, res, rsel, lastSync, rate, nd, hist;
+
+let phase, beats, pt, cells, ghosts, thr, res, rsel, lastSync, rate, nd, hist, tip;
 
 function build() {
   const ld = G.state.load;
@@ -89,16 +97,16 @@ function showBook() {
   const num = w => '<input class="p" data-p="thr" id="d-thr-' + w + '" type="number" step="0.05" min="0.3" max="1" inputmode="decimal" aria-label="score cut-off">';
   const dbr = '<span class="p" data-b="dbr"></span>';
   G.book.show({
-    floor: 'Ground floor · Room 1-5', room: 'The doublet hunt', codeFirst: true, file: 'js/doublets.js',
+    floor: 'Ground floor · Room 1-5', room: 'The doublet hunt', aim: 'Find the droplets that hold two cells. Remove them without losing real cells.', codeFirst: true, file: 'js/doublets.js',
     goals: [
       { id: 'catch', text: 'Catch at least 80% of the two-type doublets' },
-      { id: 'spare', text: 'Remove no more than 2 innocent cells' },
+      { id: 'spare', text: 'Remove no more than 2 real single cells' },
     ],
     notes: [
-      { id: 'x-what', open: true, html: 'A doublet of two different cell types shows <b>both marker sets</b> and sits between clusters. Left in, it can pass for a new cell type.' },
-      { id: 'x-sim', html: 'Doublet callers build <b>artificial doublets</b> from random pairs of cells, then score each real cell by the share of fakes among its nearest neighbours.' },
+      { id: 'x-what', open: true, html: 'A doublet of two different cell types shows <b>the marker genes of both</b> and sits between clusters. If it is left in, it can be mistaken for a new cell type.' },
+      { id: 'x-sim', html: 'Doublet callers build <b>artificial doublets</b> from random pairs of cells, then score each real cell by the share of artificial doublets among its nearest neighbours.' },
       { id: 'x-rate', html: 'Check the number you flag against the rate you expect from loading: about <b>0.8% per 1,000 cells</b>. Run the caller on <b>each lane by itself</b>, never on lanes pooled together.' },
-      { id: 'x-homo', html: 'Doublets of two cells of the <b>same type</b> are close to invisible: they look like one large cell. And cells in a real transition also sit between clusters. Do not flag everything in between.' },
+      { id: 'x-homo', html: 'Doublets of two cells of the <b>same type</b> are almost impossible to detect, because they look like one large cell. Cells in a real transition between two types also sit between clusters, so do not remove everything in between.' },
     ],
     term: {
       title: 'Same step, in code',
@@ -151,7 +159,7 @@ G.scenes.doublet = {
   sweep() { const keepThr = thr, out = []; for (let t = 0.3; t <= 1.001; t += 0.05) { thr = t; const m = measure(); out.push([t.toFixed(2), m.hetC + '/' + m.het, m.fp, m.stars]); } thr = keepThr; return { nd, out }; },
   enter() {
     build();
-    thr = 0.5; pt = 0; res = null; rsel = 0; lastSync = null;
+    thr = 0.5; pt = 0; res = null; rsel = 0; lastSync = null; tip = null;
     beats = new G.Beats(INTRO);
     phase = G.state.tries.doublet > 0 ? 'score' : 'intro';
     showBook(); sync();
@@ -162,7 +170,8 @@ G.scenes.doublet = {
     if (G.hit('b') && phase !== 'sim') { G.go('corridor', { from: 'doublet' }); return; }
     if (phase === 'intro') { if (beats.update(dt) === 'done') { phase = 'ready'; pt = 0; } }
     else if (phase === 'ready') { if (G.hit('a')) simulate(); }
-    else if (phase === 'sim') { if (pt > 2.9 || (G.skip() && pt > 0.3) || G.reduced) { phase = 'score'; pt = 0; G.book.unlock('x-rate'); } }
+    else if (phase === 'sim') { if (pt > 2.9 || (G.skip() && pt > 0.3) || G.reduced) { phase = 'score'; pt = 0; G.book.unlock('x-rate'); if (G.state.tries.doublet === 0) tip = new G.Beats([{ spot: [SX, 14, SW, 114], say: SCORE }]); } }
+    else if (phase === 'score' && tip) { if (tip.update(dt) === 'done') tip = null; }
     else if (phase === 'score') {
       const step = (G.rep('right') ? 1 : 0) - (G.rep('left') ? 1 : 0);
       if (step) { thr = G.clamp(Math.round((thr + step * 0.05) * 20) / 20, 0.3, 1); G.sfx('tick'); }
@@ -179,12 +188,11 @@ G.scenes.doublet = {
     drawMap(); drawSide();
     G.roomHeader('1-5  DOUBLET HUNT', C.pink, phase !== 'sim');
     const y0 = 130;
-    if (phase === 'intro') beats.draw();
-    else if (phase === 'ready') {
+    if (phase === 'intro' || phase === 'ready') {
       G.strip(y0);
-      T('DOUBLETS HIDE BETWEEN THE CLUSTERS. BUT WHERE, EXACTLY?', 14, y0 + 7, C.fog);
-      T('MAKE SOME FAKE ONES AND WATCH WHERE THEY LAND.', 14, y0 + 17, C.mist);
-      if (G.button('sim', 14, y0 + 29, 150, 15, 'MAKE FAKE DOUBLETS', { primary: true, focus: true })) simulate();
+      T('STEP 1 OF 2', 14, y0 + 8, C.mist);
+      if (G.button('sim', 14, y0 + 22, 180, 18, 'MAKE ARTIFICIAL DOUBLETS', { primary: true, focus: true }) && phase === 'ready') simulate();
+      if (phase === 'intro') beats.draw();
     } else if (phase === 'sim') {
       G.strip(y0);
       T('ADDING RANDOM PAIRS OF CELLS TOGETHER', 14, y0 + 8, C.white, { f: 'smb' });
@@ -192,15 +200,14 @@ G.scenes.doublet = {
       T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, y0 + 36, C.steel, { a: 'right' });
     } else if (phase === 'score') {
       G.strip(y0);
-      T('CUT-OFF: SHARE OF FAKE NEIGHBOURS', 14, y0 + 5, C.mist);
+      T('STEP 2 OF 2: CUT-OFF ON THE SCORE', 14, y0 + 5, C.mist);
       thr = G.slider('thr', 14, y0 + 22, 176, thr, 0.3, 1, 0.05, { focus: true, c: C.coral });
       T(thr.toFixed(2), 240, y0 + 17, C.coral, { a: 'right', f: 'lg' });
       T(G.kt('LEFT AND RIGHT MOVE THE CUT-OFF', 'DRAG THE CUT-OFF, HERE OR ON THE BARS'), 14, y0 + 36, C.steel);
       if (G.button('rm', 250, y0 + 6, 64, 28, 'REMOVE', { primary: true, fill: '#b94a45', accent: C.coral, focus: true })) remove();
+      if (tip) tip.draw();
     } else {
-      const msg = res.stars === 3 ? (res.missed ? 'Clean. The ' + res.missed + ' that got away are mostly same-type doublets. Nobody catches those.' : 'Every catchable doublet caught, and nobody innocent removed.')
-        : !res.okF ? (res.tr ? 'You removed real cells. Some were in a transition between two types, not doublets.' : 'Too greedy. You removed cells from the middle of healthy clusters.')
-        : 'Too cautious. Doublets are still in, waiting to be named as a new cell type.';
+      const msg = verdict();
       const act = G.resultDraw(y0, msg, res.stars > 0, rsel, 'MOVE THE CUT-OFF', 'KEEP THESE CELLS');
       if (act === 'keep') keep(); else if (act === 'retry') retry();
     }
@@ -229,18 +236,18 @@ function drawMap() {
     R(o.x - 1, o.y - 1, 2, 2, col);
     if (f) G.ring(o.x, o.y, 3, C.coral);
   });
-  if (phase === 'sim' || phase === 'score') T('HOLLOW: FAKES', EX + EW / 2, EY + 3, '#8a6f9e', { a: 'center' });
+  if (phase === 'sim' || phase === 'score') T('HOLLOW: ARTIFICIAL DOUBLETS', EX + EW / 2, EY + 3, '#8a6f9e', { a: 'center' });
 }
 
 function drawSide() {
   const x = SX, w = SW;
   G.panel(x, 14, w, 114, { border: C.slate, fill: '#0e1630' });
   if (phase === 'intro' || phase === 'ready' || phase === 'sim') {
-    T('CELLS IN THE ROOM', x + 6, 18, C.mist); T(String(cells.length), x + 6, 27, C.white, { f: 'smb' });
+    T('CELLS ON THE MAP', x + 6, 18, C.mist); T(String(cells.length), x + 6, 27, C.white, { f: 'smb' });
     T('YOU LOADED AT', x + 6, 44, C.mist); T((rate * 100).toFixed(1) + '% DOUBLETS', x + 6, 53, C.pink, { f: 'smb' });
-    T('SO EXPECT ABOUT', x + 6, 70, C.mist); T(nd + ' IN HERE', x + 6, 79, C.pink, { f: 'smb' });
-    T(rate <= 0.03 ? 'GENTLE LOADING' : rate >= 0.045 ? 'HEAVY LOADING' : 'FROM OUTSIDE THEY', x + 6, 100, C.steel);
-    T(rate <= 0.03 ? 'PAYS OFF HERE.' : rate >= 0.045 ? 'COSTS YOU HERE.' : 'LOOK LIKE CELLS.', x + 6, 109, C.steel);
+    T('SO EXPECT ABOUT', x + 6, 70, C.mist); T(nd + ' DOUBLETS', x + 6, 79, C.pink, { f: 'smb' });
+    T(rate <= 0.03 ? 'LIGHT LOADING:' : rate >= 0.045 ? 'HEAVY LOADING:' : 'A DOUBLET LOOKS', x + 6, 100, C.steel);
+    T(rate <= 0.03 ? 'FEW DOUBLETS' : rate >= 0.045 ? 'MANY DOUBLETS' : 'LIKE ONE CELL', x + 6, 109, C.steel);
     return;
   }
   if (phase === 'score') {
@@ -250,7 +257,7 @@ function drawSide() {
     R(bx, by, 92, 1, C.slate);
     const tx = bx + Math.round(thr * 92);
     R(tx, 28, 1, by - 28, C.white); R(tx - 2, 26, 5, 3, C.white);
-    T('0', bx, by + 3, C.steel); T('1', bx + 88, by + 3, C.steel); T('SHARE OF FAKES', bx + 46, by + 3, C.steel, { a: 'center' });
+    T('0', bx, by + 3, C.steel); T('1', bx + 88, by + 3, C.steel); T('SCORE', bx + 46, by + 3, C.steel, { a: 'center' });
     const n = cells.filter(flagged).length;
     T('FLAGGED', x + 6, 100, C.mist); T(String(n), x + 58, 100, C.coral, { f: 'smb' });
     T('EXPECTED', x + 6, 111, C.mist); T('ABOUT ' + nd, x + 58, 111, C.pink, { f: 'smb' });
@@ -259,10 +266,10 @@ function drawSide() {
   const s = res;
   T('TWO-TYPE DOUBLETS', x + 6, 18, C.mist);
   T(s.hetC + ' OF ' + s.het + ' CAUGHT', x + 6, 27, s.okC ? C.mint : C.coral, { f: 'smb' });
-  T('INNOCENT CELLS', x + 6, 43, C.mist);
+  T('REAL SINGLE CELLS', x + 6, 43, C.mist);
   T(s.fp + ' REMOVED', x + 6, 52, s.okF ? C.mint : C.coral, { f: 'smb' });
-  T('SAME-TYPE ONES', x + 6, 68, C.mist);
-  T((s.hom - s.homC) + ' OF ' + s.hom + ' ESCAPED', x + 6, 77, C.amber, { f: 'smb' });
+  T('SAME-TYPE DOUBLETS', x + 6, 68, C.mist);
+  T((s.hom - s.homC) + ' OF ' + s.hom + ' MISSED', x + 6, 77, C.amber, { f: 'smb' });
   R(x + 5, 90, w - 10, 1, C.slate);
   G.stars(x + 6, 95, s.stars);
   T('X CAUGHT  O MISSED', x + 6, 110, C.steel);

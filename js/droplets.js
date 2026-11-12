@@ -8,12 +8,13 @@ const { R, T, C, VW, VH } = G;
 const GOAL_CELLS = 8000, GOAL_RATE = 0.04;
 const JX = 126, CY = 62, EXIT_X = 236, TUBE_X = 250;
 
+/* Mika's walk through the chip. The animation on screen follows the step: see stream(). */
 const BEATS = [
-  { say: 'It starts with tissue, dissociated into single cells. They flow into the chip in single file.' },
-  { say: 'Gel beads arrive from the top. Every oligo on one bead carries the same barcode.' },
-  { say: 'Oil pinches the stream into droplets. One bead plus one cell: all of that cell\'s RNA gets one barcode.' },
-  { say: 'Most droplets catch a bead but no cell. A few catch two cells. Those are doublets: two cells, one barcode.' },
-  { say: 'Your job: 8,000 single cells, with doublets at 4% or less. Set the load and the lanes, then run the chip.' },
+  { say: 'Your tissue is now single cells. They flow into the chip from the left, one after another.' },
+  { say: 'Gel beads come in from the top. Every bead carries its own barcode.' },
+  { say: 'Oil pinches the stream into droplets. One bead and one cell in a droplet: all of that cell\'s RNA gets the same barcode.' },
+  { say: 'Most droplets get no cell. A few get two. Those are doublets: two cells sharing one barcode.' },
+  { spot: [0, 111, VW, 69], say: 'Collect 8,000 single cells, with 4% doublets or fewer. Set the cells per lane and the number of lanes. Then press RUN.' },
 ];
 
 const POKE = [
@@ -24,7 +25,7 @@ const POKE = [
   { r: [238, 40, 24, 68], say: ['TUBE: DO NOT DROP. NO, SERIOUSLY.', 'TUBE: A WEEK OF WORK IN 100 MICROLITRES.'] },
 ];
 let pokeN = 0;
-let phase, beats, now, R_, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, forecast, rsel, dblSeen;
+let phase, beats, now, R_, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, forecast, rsel, dblSeen, say;
 
 function compute(r, n) {
   const d = 0.008 * r / 1000, dbl = Math.round(r * d), lam = 2 * d;
@@ -47,11 +48,19 @@ function stream() {
   if (phase === 'run') return { P: 0.13, travel: 1.0, lam, beads: true, rings: true, maxK: 3, force: 0, mark: true };
   return { P: 0.3, travel: 1.8, lam, beads: true, rings: true, maxK: 3, force: 0, mark: forecast };
 }
+function verdict() {
+  const o = res.o, j = res.j;
+  if (!j.okRate && j.okCells) return 'Enough cells, but too many doublets. The more cells you load into one lane, the more doublets: about 0.8% per 1,000 cells. Load fewer per lane, and use more lanes.';
+  if (j.okRate && !j.okCells) return 'Few doublets, but not enough cells. One lane cannot give more at this rate. Use more lanes.';
+  if (!j.pass) return 'Too few cells and too many doublets. Load fewer cells per lane, and use more lanes.';
+  if (j.stars === 3) return 'Enough cells, and few doublets. Splitting them across lanes kept the rate down. The ' + G.fmt(o.doublets) + ' doublets you did make stay in the data until room 1-5.';
+  return 'It works, but two lanes would have been enough. Every lane is another kit.';
+}
 function resetStream() { planned = []; cells = []; beads = []; drops = []; lastPlan = now; dblSeen = 0; }
 
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · Room 1-1', room: 'The droplet bay', file: 'js/droplets.js',
+    floor: 'Ground floor · Room 1-1', room: 'The droplet bay', aim: 'Load the chip so that you get enough single cells without too many doublets.', file: 'js/droplets.js',
     goals: [
       { id: 'cells', text: 'At least 8,000 singlets' },
       { id: 'rate', text: 'Doublets at 4% or less' },
@@ -115,6 +124,8 @@ G.scenes.droplets = {
       if (run.t >= run.D) finish();
     } else if (phase === 'result') {
       const j = res.j;
+      /* Mika says why first */
+      if (say) { if (say.update(dt) === 'done') say = null; return; }
       if (G.hit('left') || G.hit('right')) { rsel = 1 - rsel; G.sfx('tick'); }
       if (G.hit('a')) { if (rsel === 1 && j.pass) keep(); else retry(); }
     }
@@ -125,10 +136,10 @@ G.scenes.droplets = {
     drawTally();
     G.roomHeader('1-1  DROPLET BAY', C.cyan, phase !== 'run');
 
-    if (phase === 'intro') beats.draw();
+    if (phase === 'intro') { drawConfig(); beats.draw(); }
     else if (phase === 'config') drawConfig();
     else if (phase === 'run') drawRun();
-    else if (phase === 'result') drawResult();
+    else if (phase === 'result') { drawResult(); if (say) say.draw({ top: true }); }
   },
 };
 
@@ -141,7 +152,7 @@ function startRun() {
 }
 function finish() {
   const o = run.o, j = judge(o);
-  res = { o, j }; phase = 'result'; rsel = j.pass ? 1 : 0;
+  res = { o, j }; phase = 'result'; rsel = j.pass ? 1 : 0; say = new G.Beats([{ say: verdict() }]);
   G.book.goal('cells', j.okCells); G.book.goal('rate', j.okRate);
   G.book.goal('lanes', j.pass ? (j.stars === 3 ? true : false) : null);
   G.book.unlock('d-rule'); forecast = true;
@@ -308,10 +319,10 @@ function drawRun() {
 }
 
 function drawResult() {
-  const o = res.o, j = res.j, x = 12, y = 58, w = 250, h = 118;
+  const o = res.o, j = res.j, x = 12, y = 80, w = 250, h = 92;
   R(0, 111, VW, VH - 111, '#0e1630');
   G.panel(x, y, w, h, { border: j.pass ? C.mint : C.coral, fill: C.ink });
-  T(j.pass ? 'RUN COMPLETE' : 'NOT GOOD ENOUGH', x + 10, y + 7, j.pass ? C.mint : C.coral, { f: 'smb' });
+  T(j.pass ? 'PASSED' : 'NOT YET', x + 10, y + 7, j.pass ? C.mint : C.coral, { f: 'smb' });
   if (j.pass) G.stars(x + w - 36, y + 7, j.stars);
   const row = (yy, label, val, ok, goal) => {
     T(label, x + 10, yy, C.mist); T(val, x + 122, yy, C.white, { a: 'right', f: 'smb' });
@@ -321,14 +332,8 @@ function drawResult() {
   row(y + 22, 'SINGLETS', G.fmt(o.singlets), j.okCells, '8,000+');
   row(y + 33, 'DOUBLETS', (o.rate * 100).toFixed(1) + '%', j.okRate, '4% MAX');
   row(y + 44, 'LANES', String(o.lanes), null, o.lanes === 1 ? '' : G.fmt(o.R) + ' EACH');
-  let msg;
-  if (!j.okRate && j.okCells) msg = 'Too many doublets. They rise with every cell you load into a lane. What else can you change?';
-  else if (j.okRate && !j.okCells) msg = 'Clean, but too few cells to find the rare ones. One lane has a limit. Use more than one.';
-  else if (!j.pass) msg = 'Too few singlets and too many doublets. Load less per lane, and use more lanes.';
-  else if (j.stars === 3) msg = 'Clean and efficient. Splitting the load across lanes keeps doublets down. Mika almost smiles.';
-  else msg = 'It works, but you used ' + o.lanes + ' lanes. Two would do. Every lane costs a kit and a sigh from finance.';
-  G.wrap(msg, w - 20, 'md').slice(0, 3).forEach((l, i) => T(l, x + 10, y + 56 + i * 12, C.paper, { f: 'md' }));
-  if (G.button('retry', x + 10, y + 98, 70, 14, 'TRY AGAIN', { focus: rsel === 0 || !j.pass })) retry();
-  if (j.pass && G.button('keep', x + w - 104, y + 98, 94, 14, 'KEEP THIS RUN', { primary: true, focus: rsel === 1 })) keep();
+  T(j.pass ? 'Keep this run, or try again.' : 'Change the load and try again.', x + 10, y + 57, C.fog, { f: 'md' });
+  if (G.button('retry', x + 10, y + 72, 70, 14, 'TRY AGAIN', { focus: rsel === 0 || !j.pass })) retry();
+  if (j.pass && G.button('keep', x + w - 104, y + 72, 94, 14, 'KEEP THIS RUN', { primary: true, focus: rsel === 1 })) keep();
 }
 })();

@@ -193,6 +193,24 @@ const FIGS = G.FIGS = {
   },
 };
 
+FIGS.elbow = {
+  title: 'FIG. 10   THE ELBOW',
+  cap: 'A scree plot. The elbow is where extra components stop adding much. People tend to find it wherever they need it.',
+  draw(t) {
+    const h = [40, 21, 8, 6, 4, 3, 3, 2, 2, 2, 1, 1], x0 = X + 62, by = Y + 78;
+    R(x0 - 6, by, 188, 1, C.steel); R(x0 - 6, Y + 8, 1, by - Y - 8, C.steel);
+    h.forEach((v, i) => { R(x0 + i * 15, by - v * 1.6, 11, v * 1.6, i < 4 ? C.teal : '#4a5b86'); T(String(i + 1), x0 + i * 15 + 5, by + 3, C.steel, { a: 'center' }); });
+    T('VARIANCE', X + 6, Y + 8, C.steel); T('COMPONENT', x0 + 84, by + 12, C.steel, { a: 'center' });
+    /* three people, three elbows */
+    [[2, 'HERE'], [4, 'NO, HERE'], [7, 'SURELY HERE']].forEach((e, i) => {
+      if (Math.floor(t * 0.8) % 3 !== i && !G.reduced) return;
+      const ex = x0 + e[0] * 15 + 5, ey = by - h[e[0]] * 1.6 - 6;
+      R(ex, ey - 12, 1, 12, C.amber); R(ex - 2, ey - 3, 5, 1, C.amber); R(ex - 1, ey - 2, 3, 1, C.amber);
+      T(e[1], ex + 4, ey - 20, C.amber);
+    });
+  },
+};
+
 /* the overlay: a framed figure with a caption. t is seconds since it opened. */
 G.drawFigure = function (id, t) {
   const f = FIGS[id];
