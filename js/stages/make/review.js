@@ -1,4 +1,4 @@
-/* The floor finale: Reviewer 2. Five questions, one from each room, about the reasoning and not
+/* The end of the core facility: Reviewer 2. Five questions, one from each room, about the reasoning and not
    the numbers. Three wrong answers and the paper is rejected. */
 (function () {
 'use strict';
@@ -35,10 +35,10 @@ function record() {
 }
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · The last door', room: 'Reviewer 2', aim: 'Show Reviewer 2 that you know why you did what you did.', methods: true, file: 'js/review.js', fileText: 'edit the questions', fileTail: ' if one of them is unfair.',
+    floor: 'Core facility · The last door', room: 'Reviewer 2', aim: 'Show Reviewer 2 that you know why you did what you did.', methods: true, file: 'js/stages/make/review.js', fileText: 'edit the questions', fileTail: ' if one of them is unfair.',
     goals: [{ id: 'three', text: 'Answer at least 3 of the 5 questions' }, { id: 'five', text: 'Answer all 5 for a clean accept' }],
     notes: [
-      { id: 'r-hint', open: true, html: 'Everything Reviewer 2 asks was answered in a room on this floor. The right answer is the reasoning, not the number.' },
+      { id: 'r-hint', open: true, html: 'Everything Reviewer 2 asks was answered in a room in this building. The right answer is the reasoning, not the number.' },
       { id: 'r-hearts', open: true, html: 'You have three hearts of reputation. Each wrong answer costs one.' },
     ],
     term: null, termNote: 'No code in here. Only consequences.',
@@ -71,12 +71,14 @@ function restart() { qi = 0; sel = 0; pick = -1; right = 0; hearts = 3; phase = 
 function leave() {
   const s = G.state;
   if (verdict && verdict.stars) { s.rooms.review = { done: true, stars: Math.max(s.rooms.review.stars, verdict.stars) }; G.save(); }
-  G.go('corridor', { from: 'rev2', toast: verdict && verdict.stars ? 'GROUND FLOOR COMPLETE: ' + verdict.title : null, party: !!(verdict && verdict.stars) });
+  G.go('corridor', { from: 'rev2', toast: verdict && verdict.stars ? 'CORE FACILITY COMPLETE: ' + verdict.title : null, party: !!(verdict && verdict.stars) });
 }
 
 G.scenes.review = {
   phase: () => phase,
   enter() {
+    /* two of the questions are about this tissue's own cells: the cell system words them (js/systems) */
+    const rv = G.sys.review; QS[3].q = rv.ambient.q; QS[3].o = rv.ambient.o; QS[4].q = rv.mixed.q;
     qi = 0; sel = 0; pick = -1; right = 0; hearts = 3; flash = -9; verdict = null; rsel = 0; askT = 0;
     beats = new G.Beats([
       { say: 'REVIEWER 2: Sit. I have read your methods section. All of it. Twice.' },

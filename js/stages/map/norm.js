@@ -10,7 +10,7 @@ const RAMP = ['#22355f', '#3f6fa8', '#7fc4e8', '#ffffff'];
 
 const TOUR = [
   { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Each dot is a cell. Similar cells sit together. Bright dots were sequenced deeply: more RNA was counted in them.' },
-  { spot: [SX, 14, SW, 114], say: 'Right now depth decides where a cell sits, not its type. The bars compare a deep and a shallow monocyte.' },
+  { spot: [SX, 14, SW, 114], say: () => 'Right now depth decides where a cell sits, not its type. The bars compare a deep and a shallow ' + G.sys.norm.cell + '.' },
   { spot: [0, 130, VW, 50], say: 'Flip the two switches and watch what changes. When both meters are green, press CHECK.' },
 ];
 
@@ -35,7 +35,7 @@ function compute() {
   const pu = cl.purity(S, 6);
   met = { depth: mx(ld, 4), ribo: mx(lr, 2), by: pu.by, common: Math.min(pu.by[0], pu.by[1], pu.by[2], pu.by[3]) };
   met.okD = met.depth < 0.25; met.okR = met.ribo < 0.5; met.okP = met.common >= 0.95;
-  const genes = ['LYZ', 'S100A9', 'CST3', 'ACTB', 'RPL13'].map(nm => cl.genes.findIndex(g => g.name === nm));
+  const genes = G.sys.norm.genes.map(nm => cl.genes.findIndex(g => g.name === nm));
   vals = mono.map(i => genes.map(j => M[i][j]));
 }
 
@@ -56,8 +56,8 @@ function sync() {
 
 function showBook() {
   G.book.show({
-    floor: 'Floor 2 · Station 2-1', room: 'The Leveller', aim: 'Remove the effect of sequencing depth, so that the differences left between cells are biological.',
-    codeFirst: true, file: 'js/norm.js',
+    floor: 'The Cloud · Station 2-1', room: 'The Leveller', aim: 'Remove the effect of sequencing depth, so that the differences left between cells are biological.',
+    codeFirst: true, file: 'js/stages/map/norm.js',
     goals: [
       { id: 'depth', text: 'Sequencing depth explains less than 25% of the picture' },
       { id: 'ribo', text: 'A few abundant genes explain less than 50% of it' },
@@ -67,7 +67,7 @@ function showBook() {
       { id: 'n-what', open: true, html: '<b>Sequencing depth</b> is the number of RNA molecules counted in a cell. A cell sequenced twice as deeply has about twice the counts for every gene. Until that is removed, depth is the largest difference between cells.' },
       { id: 'n-depth', html: '<b>Step 1.</b> Divide each cell\'s counts by the cell\'s total, then multiply by a common number (here the median total). Two cells of the same type now have similar values, however deeply each was sequenced.' },
       { id: 'n-log', html: '<b>Step 2.</b> Take log(1 + x). Without it, the few most abundant genes have by far the largest values and dominate every comparison between cells.' },
-      { id: 'n-alt', html: 'These two steps are the most common default. Other methods model depth more carefully, for example <b>scran</b> size factors and <b>Pearson residuals</b> (sctransform). Benchmarks have not found one method that is best for every task.' },
+      { id: 'n-alt', html: 'These two steps are the most common default. Other methods model depth more carefully, for example <b>scran</b> size factors and <b>Pearson residuals</b> (sctransform). In one benchmark the plain log transform did as well as the alternatives, or better.' },
     ],
     term: {
       title: 'Same step, in code',
@@ -213,7 +213,7 @@ function drawSide() {
   bar(38, 'SEQUENCING DEPTH', met.depth, met.okD, 'AIM: UNDER 25%');
   bar(63, 'ABUNDANT GENES', met.ribo, met.okR, 'AIM: UNDER 50%');
   R(x + 5, 87, w - 10, 1, C.slate);
-  T('TWO MONOCYTES', x + 6, 90, C.mist);
+  T(G.sys.norm.title, x + 6, 90, C.mist);
   const top = Math.max.apply(null, vals[0].concat(vals[1])) || 1;
   vals.forEach((v, k) => {
     const bx = x + 8 + k * 60;

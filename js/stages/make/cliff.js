@@ -23,7 +23,7 @@ const INTRO = [
 ];
 const TEST_TOUR = [
   { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'This works like EmptyDrops. Barcodes at or below LOWER are taken as empty. They show what background RNA looks like.' },
-  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Barcodes between the two lines are tested against that background. Above the KNEE they are kept without a test.' },
+  { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Barcodes between the two lines are tested against that background. Above the KNEE they are always kept.' },
   { spot: [0, 130, VW, 50], say: 'Set LOWER and FDR. A smaller FDR is stricter: fewer empty droplets get in, but small cells can fail. Then press RUN TEST.' },
 ];
 
@@ -108,7 +108,7 @@ function showBook() {
   const num = (k, w) => '<input class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" type="number" inputmode="numeric" aria-label="' + k + '">';
   const pick = (k, w, vals) => '<select class="p" data-p="' + k + '" id="p-' + k + '-' + w + '" aria-label="' + k + '">' + vals.map(v => '<option value="' + v + '">' + v + '</option>').join('') + '</select>';
   G.book.show({
-    floor: 'Ground floor · Room 1-2', room: 'The Cliff', aim: 'Decide which barcodes are real cells and which are empty droplets.', codeFirst: true, file: 'js/cliff.js',
+    floor: 'Core facility · Room 1-2', room: 'The Cliff', aim: 'Decide which barcodes are real cells and which are empty droplets.', codeFirst: true, file: 'js/stages/make/cliff.js',
     goals: [
       { id: 'recall', text: 'Keep at least 97% of the real cells' },
       { id: 'empty', text: 'Let in 1% empty droplets at most' },
@@ -116,7 +116,7 @@ function showBook() {
     notes: [
       { id: 'c-rank', open: true, html: 'Rank every barcode by its UMI count. Cells form the flat part on the left, the <b>plateau</b>. Then a <b>cliff</b> drops to the background: empty droplets that picked up free-floating RNA.' },
       { id: 'c-line', html: 'A cut-off on the UMI count either loses small cells that contain little RNA, or lets in empty droplets that picked up free-floating RNA. <b>No single cut-off avoids both.</b>' },
-      { id: 'c-ed', html: '<b>EmptyDrops</b>: barcodes at or below <b>lower</b> are assumed to be empty and define the background RNA. Every barcode above it is tested against that background. Barcodes above the <b>knee</b> are kept without a test.' },
+      { id: 'c-ed', html: '<b>EmptyDrops</b>: barcodes at or below <b>lower</b> are assumed to be empty and define the background RNA. Every barcode above it is tested against that background. Barcodes above the <b>knee</b> are always kept, whatever the test says.' },
       { id: 'c-after', html: 'Cell calling does not remove ambient RNA from the called cells, and it does not find doublets. Those are separate steps: rooms 1-4 and 1-5.' },
     ],
     term: {

@@ -6,8 +6,9 @@
 'use strict';
 const { R, T, C, VW, VH } = G;
 const PX = 6, PY = 16, PW = 180, PH = 110, SX = 190, SW = 126;
-const CX = PX + PW / 2, CY = PY + PH / 2 + 2, GX = 'CD74', GY = 'LYZ';
-const NAMES = ['T cells', 'NK cells', 'B cells', 'monocytes', 'rare cells'];
+const CX = PX + PW / 2, CY = PY + PH / 2 + 2;
+/* two genes that rise and fall together, and what the cell types are called: the cell system says */
+let GX, GY, NAMES;
 const PLOT = [PX - 1, PY - 1, PW + 2, PH + 2], SIDE = [SX, 14, SW, 114], STRIP = [0, 130, VW, 50];
 
 let phase, beats, M, ang, spin, miss, pc, K, pur, need, dims, res, rsel, checks, lastSync, nGenes, ext, plat;
@@ -80,28 +81,28 @@ function sync() {
 function showBook() {
   const num = w => '<input class="p" data-p="pdims" id="p-dims-' + w + '" type="number" step="1" min="1" max="12" inputmode="numeric" aria-label="components to keep">';
   G.book.show({
-    floor: 'Floor 2 · Station 2-3', room: 'The Rotator', aim: 'Describe each cell with a few principal components instead of many genes, without losing any cell type.',
-    codeFirst: true, file: 'js/pca.js',
+    floor: 'The Cloud · Station 2-3', room: 'The Rotator', aim: 'Describe each cell with a few principal components instead of many genes, without losing any cell type.',
+    codeFirst: true, file: 'js/stages/map/pca.js',
     goals: [
       { id: 'axis', text: 'Find the line that keeps the most variance' },
       { id: 'apart', text: 'Keep enough components to separate every cell type' },
       { id: 'lean', text: 'Leave out the components that are mostly noise' },
     ],
     notes: [
-      { id: 'p-why', open: true, html: 'Many genes rise and fall together. Where one monocyte gene is high, the others are too. <b>PCA replaces many correlated genes with a few new axes</b>, called principal components, that keep most of the variation.' },
+      { id: 'p-why', open: true, html: 'Many genes rise and fall together. Where one ' + G.sys.pca.cell + ' gene is high, the others are too. <b>PCA replaces many correlated genes with a few new axes</b>, called principal components, that keep most of the variation.' },
       { id: 'p-what', html: 'The first principal component is the direction along which the cells vary most. The second is the best direction at right angles to the first. Each one carries less variance than the one before.' },
       { id: 'p-elbow', html: 'Plot the variance of each component and look for the <b>elbow</b>, where the bars level off. Components before it carry structure. Components after it are mostly noise.' },
       { id: 'p-safe', html: 'The two mistakes are not equal. <b>Too few components lose cell types</b>, and rare ones go first. Too many cost computing time and add a little noise. When unsure, keep a few more.' },
     ],
     term: {
       title: 'Same step, in code',
-      intro: 'The <b>highlighted value</b> is the number of components you keep. It is live. This toy data has five cell types, so a few components are enough. Real tissues need more: 20 to 50 is common.',
+      intro: 'The <b>highlighted value</b> is the number of components you keep. It is live. This toy data has five cell types, so a few components are enough. Real tissues need more: 10 to 50 is common.',
       tabs: [
         { id: 'sc', label: 'Python · Scanpy', html:
           '<pre class="code"><span class="k">import</span> scanpy <span class="k">as</span> sc\n\n' +
           '<span class="c"># optional: give every gene the same variance</span>\n' +
           'sc.pp.<span class="k">scale</span>(adata, max_value=10)\n\n' +
-          'sc.tl.<span class="k">pca</span>(adata, n_comps=50)\n\n' +
+          'sc.pp.<span class="k">pca</span>(adata, n_comps=50)\n\n' +
           '<span class="c"># the elbow plot</span>\n' +
           'sc.pl.<span class="k">pca_variance_ratio</span>(\n    adata, n_pcs=50, log=<span class="k">True</span>)\n\n' +
           '<span class="c"># the next step uses the components you keep</span>\n' +
@@ -145,6 +146,7 @@ function keep() {
 G.scenes.pca = {
   phase: () => phase,
   enter() {
+    GX = G.sys.pca.gx; GY = G.sys.pca.gy; NAMES = G.sys.pca.names;
     const cl = G.cloud; cl.build();
     M = cl.normalise({ depth: true, log: true });
     buildPca(); buildSpin();

@@ -9,7 +9,8 @@ const PX = 6, PY = 16, PW = 180, PH = 110, SX = 190, SW = 126;
 const NS = [12, 24, 40, 64, 100, 207];
 /* the toy matrix has 207 genes; the terminal shows the matching number for a real one of about 20,000 */
 const REAL = { 12: 500, 24: 1000, 40: 2000, 64: 3000, 100: 5000, 207: 20000 };
-const KNOWN = [['CD3E', 'T CELLS', 'T cells'], ['MS4A1', 'B CELLS', 'B cells'], ['NKG7', 'NK CELLS', 'NK cells'], ['LYZ', 'MONOCYTES', 'monocytes'], ['FCER1A', 'RARE CELLS', 'the rare cells']];
+/* one known marker for each cell type: the cell system says which (js/systems) */
+const known = () => G.sys.hvg.known;
 
 const TOUR = [
   { spot: [PX - 1, PY - 1, PW + 2, PH + 2], say: 'Each dot is a gene. Genes on the right are expressed more. Genes higher up vary more from cell to cell.' },
@@ -33,7 +34,7 @@ function repick() {
   picked = {}; cols.forEach(j => { picked[j] = true; });
   const low = Math.min.apply(null, cols.map(j => st[j][key]));
   cut = PY + PH - 14 - (low - r[0]) / (r[1] - r[0]) * (PH - 28);
-  missing = KNOWN.filter(k => !picked[cl.genes.findIndex(g => g.name === k[0])]);
+  missing = known().filter(k => !picked[cl.genes.findIndex(g => g.name === k[0])]);
   nuis = countKind('ribo');
   return cols;
 }
@@ -52,7 +53,7 @@ function verdict() {
   if (method === 'raw') return 'Variance alone picks highly expressed genes, not informative ones. Rank by ABOVE TREND instead.';
   if (NS[ni] <= 24) return 'The list is too short. Some cell types have no marker gene in it. Keep more genes.';
   if (NS[ni] === 207) return 'With every gene in the list, noise outweighs the markers. Keep fewer genes.';
-  return 'Some cell types still overlap. Look at which markers are OUT.';
+  return 'Some cell types still overlap. Look at which markers have a cross.';
 }
 
 function sync() {
@@ -66,8 +67,8 @@ function sync() {
 function showBook() {
   const n = '<span class="p" data-b="hn"></span>';
   G.book.show({
-    floor: 'Floor 2 · Station 2-2', room: 'The Gene Picker', aim: 'Keep the genes that differ between cell types, and leave out the genes that only add noise.',
-    codeFirst: true, file: 'js/hvg.js',
+    floor: 'The Cloud · Station 2-2', room: 'The Gene Picker', aim: 'Keep the genes that differ between cell types, and leave out the genes that only add noise.',
+    codeFirst: true, file: 'js/stages/map/hvg.js',
     goals: [
       { id: 'common', text: 'Each of the four large cell types stays separate' },
       { id: 'rare', text: 'The 8 rare cells stay separate too' },
@@ -77,7 +78,7 @@ function showBook() {
       { id: 'h-what', open: true, html: 'Of about 20,000 genes, a few thousand differ between cell types. The rest add noise to every comparison between cells. <b>Feature selection keeps the informative genes</b>, usually called highly variable genes.' },
       { id: 'h-trend', html: 'Highly expressed genes vary more, whatever they do. So genes are not ranked by variance alone. They are ranked by how far their variance is <b>above what their mean expression predicts</b>.' },
       { id: 'h-many', html: 'Common choices are <b>1,000 to 5,000</b> genes. With too few, some cell types have no marker gene in the list. With too many, noise comes back. In this data set the 8 rare cells are the first to be lost either way.' },
-      { id: 'h-scale', html: 'Before PCA, each gene is usually scaled to the same variance, so that highly expressed genes do not dominate. The cost is that an uninformative gene in the list then counts as much as a marker gene.' },
+      { id: 'h-scale', html: 'Before PCA, many pipelines scale each gene to the same variance, so that highly expressed genes do not dominate. Not everyone does: the cost is that an uninformative gene in the list then counts as much as a marker gene.' },
       { id: 'h-check', html: 'After selecting, <b>look up a few marker genes you know</b>. If the marker of a population you care about is missing, that population may not be found later.' },
       { id: 'h-skip', html: 'Mitochondrial and ribosomal genes often rank high because they follow cell quality and library composition. Many pipelines exclude them by name. This is a judgement call: keep them if they are part of your question.' },
     ],
@@ -102,7 +103,7 @@ function showBook() {
           'hvg &lt;- <span class="k">VariableFeatures</span>(obj)\n' +
           '<span class="k">VariableFeatures</span>(obj) &lt;-\n    hvg[!<span class="k">grepl</span>(<span class="s">"^MT-|^RP[SL]"</span>, hvg)]</span>\n\n' +
           '<span class="c"># look up a marker you know</span>\n' +
-          '<span class="s">"FCER1A"</span> %in% <span class="k">VariableFeatures</span>(obj)</pre>' },
+          '<span class="s">"' + known()[4][0] + '"</span> %in% <span class="k">VariableFeatures</span>(obj)</pre>' },
         { id: 'ca', label: 'Python · CyteArc', html:
           '<pre class="code"><span class="hl" data-on="hblock=on"><span class="c"># by default a name blacklist leaves out mito,\n# ribosomal and a few other gene families</span>\n' +
           'features = ds.features.<span class="k">hvgs</span>(\n    cells, top_n=' + n + ')</span>\n\n' +
@@ -241,10 +242,13 @@ function drawSide() {
   T('GENES KEPT', x + 6, 18, C.mist); T(NS[ni] + ' OF 207', x + w - 6, 18, C.amber, { a: 'right' });
   R(x + 5, 29, w - 10, 1, C.slate);
   T('MARKER GENE CHECK', x + 6, 33, C.mist);
-  KNOWN.forEach((k, i) => {
+  /* a tick or a cross, the gene, and the cell type it marks; the columns fit whatever names the cell system has */
+  const kn = known(), tx = x + 16 + Math.ceil(Math.max.apply(null, kn.map(k => G.tw(k[0], 'sm')))) + 5;
+  kn.forEach((k, i) => {
     const y = 45 + i * 10, on = !!picked[cl.genes.findIndex(g => g.name === k[0])];
-    T(k[0], x + 6, y, C.fog); T(k[1], x + 44, y, C.steel);
-    T(on ? 'IN' : 'OUT', x + w - 6, y, on ? C.mint : C.coral, { a: 'right' });
+    if (on) { R(x + 6, y + 4, 2, 2, C.mint); R(x + 8, y + 6, 2, 2, C.mint); R(x + 10, y + 4, 2, 2, C.mint); R(x + 12, y + 2, 2, 2, C.mint); }
+    else { for (let d = 0; d < 3; d++) { R(x + 7 + d * 2, y + 2 + d * 2, 2, 2, C.coral); R(x + 11 - d * 2, y + 2 + d * 2, 2, 2, C.coral); } }
+    T(k[0], x + 16, y, on ? C.fog : C.coral); T(k[1], tx, y, C.steel);
   });
   R(x + 5, 97, w - 10, 1, C.slate);
   T('MITOCHONDRIAL AND', x + 6, 101, C.fog); T('RIBOSOMAL GENES IN', x + 6, 110, C.fog);

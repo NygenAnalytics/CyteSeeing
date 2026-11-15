@@ -1,4 +1,4 @@
-/* The end of floor 2: journal club. The student presents the map the player made and makes
+/* The end of the Cloud: journal club. The student, Tomo, presents the map the player made and makes
    seven claims about it. Some are fair. Some read more into a UMAP than it can show. The player
    judges each one. Every claim goes back to something a station on this floor showed.
    The student makes the claims and Noor, sitting next to the player, says why each answer was
@@ -10,7 +10,7 @@ const SX = 12, SY = 18, SWD = 150, SH = 88;
 
 const CLAIMS = [
   { say: 'Each dot is one cell. Cells that sit together on the map have similar expression.', fair: true,
-    why: 'Fair. Cells that sit together on the map are usually neighbours in the graph.' },
+    why: 'Fair. Cells in one island of the map are close in the graph.' },
   { say: 'These two islands are the furthest apart. So they are the two most different cell types.', fair: false, mark: 'far',
     why: 'Not fair. The layout decides how far apart islands land. To compare cell types, compare their expression.' },
   { say: 'The eight rare cells only became an island of their own once we chose better genes.', fair: true, mark: 'rare',
@@ -53,12 +53,12 @@ function build() {
 
 function showBook() {
   G.book.show({
-    floor: 'Floor 2 · The far end', room: 'Journal club', aim: 'Your student presents your map and makes 7 claims about it. Decide which claims the map really supports.',
-    methods: true, file: 'js/club.js', fileText: 'edit the claims', fileTail: ' if you have heard a better one at a real journal club.',
+    floor: 'The Cloud · The far end', room: 'Journal club', aim: 'Tomo presents your map and makes 7 claims about it. Decide which claims the map really supports.',
+    methods: true, file: 'js/stages/map/club.js', fileText: 'edit the claims', fileTail: ' if you have heard a better one at a real journal club.',
     goals: [{ id: 'most', text: 'Judge at least 5 of the 7 claims correctly' }, { id: 'all', text: 'Judge all 7 correctly' }],
     notes: [
-      { id: 'j-hint', open: true, html: 'Every claim relates to something a station on this floor showed you.' },
-      { id: 'j-map', open: true, html: 'A UMAP is a drawing of the neighbour graph. <b>You can trust which cells sit together.</b> Do not interpret the position of an island, its distance from other islands, or its size.' },
+      { id: 'j-hint', open: true, html: 'Every claim relates to something a station in this hall showed you.' },
+      { id: 'j-map', open: true, html: 'A UMAP is a drawing of the neighbour graph. <b>You can trust which cells share an island.</b> Do not interpret the position of an island, its distance from other islands, or its size.' },
     ],
     term: null, termNote: 'No code here. Only slides.',
   });
@@ -91,7 +91,7 @@ function restart() { qi = 0; sel = 0; right = 0; phase = 'ask'; askT = G.t; ['mo
 function leave() {
   const s = G.state, ok = verdict && verdict.stars;
   if (ok) { s.rooms.club = { done: true, stars: Math.max(s.rooms.club.stars, verdict.stars) }; G.save(); }
-  G.go('corridor', { from: 'club', toast: ok ? 'FLOOR 2 COMPLETE' : null, party: !!ok });
+  G.go('corridor', { from: 'club', toast: ok ? 'THE CLOUD COMPLETE' : null, party: !!ok });
 }
 
 G.scenes.club = {
@@ -100,7 +100,7 @@ G.scenes.club = {
     build();
     qi = 0; sel = 0; right = 0; askT = 0; handT = -9; nodT = -9; last = true; verdict = null; rsel = 0;
     beats = new G.Beats([
-      { say: 'NOOR: Journal club. Your student is presenting the map you made.' },
+      { say: 'NOOR: Journal club. Tomo is presenting the map you made.' },
       { say: 'NOOR: Seven claims. Choose FAIR if the map supports the claim. Choose NOT FAIR if it reads too much into the map.' },
     ]);
     phase = 'intro';
@@ -138,7 +138,7 @@ G.scenes.club = {
       beats.draw();
       return;
     }
-    G.caption('PHD STUDENT: ' + CLAIMS[qi].say, G.t - askT, { noPrompt: true });
+    G.caption('TOMO: ' + CLAIMS[qi].say, G.t - askT, { noPrompt: true });
     const live = G.t - askT > 0.5;
     if (G.button('jc-f', 12, 109, 140, 14, 'FAIR', { focus: sel === 0 }) && live) call(true);
     if (G.button('jc-o', 168, 109, 140, 14, 'NOT FAIR', { focus: sel === 1, accent: C.coral }) && live) call(false);

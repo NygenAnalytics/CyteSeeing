@@ -8,18 +8,17 @@
 'use strict';
 const { R, T, C, VW, VH } = G;
 const PX = 6, PY = 16, PW = 180, PH = 110, SX = 190, SW = 126;
-const COLOURS = [
-  ['LYZ', 'A MONOCYTE GENE'], ['CD3E', 'A T CELL GENE'], ['NKG7', 'AN NK CELL GENE'], ['MS4A1', 'A B CELL GENE'], ['FCER1A', 'A RARE-CELL GENE'], ['DEPTH', 'SEQUENCING DEPTH'],
-];
+/* one gene per cell type to colour the map by (the cell system says which), and the depth */
+let COLOURS;
 const RAMP = ['#52639a', '#8a9bcb', '#d99a2e', '#ffd27a'];
 const QUIZ = [
   { o: 'EACH ISLAND IS IN THE SAME PLACE', no: 'Look again. Find the same island in both maps. Is it in the same place?' },
   { o: 'THE SAME CELLS ARE GROUPED TOGETHER', yes: true },
   { o: 'THE ISLANDS ARE THE SAME DISTANCE APART', no: 'Look again. Pick two islands. Is the gap between them the same in both maps?' },
 ];
-const RIGHT = 'Yes. Which cells sit together comes from the graph, so it never changes. Where an island lands, how far it is from the others and how big it looks is the layout. Do not read those as results. ' +
+const RIGHT = 'Yes. Which cells share an island comes from the graph, so it never changes. Where an island lands, how far it is from the others and how big it looks is the layout. Do not read those as results. ' +
   'Real UMAP starts from a better first guess than this table, so its maps move less. The caution is the same.';
-const FIRST = 'That is a map of your cells. Cells that sit together are neighbours in the graph. Colour it by a marker gene to see which island is which. Then shake the table and draw it again: same graph, new random start.';
+const FIRST = 'That is a map of your cells. Cells in one island are close in the graph. Colour it by a marker gene to see which island is which. Then shake the table and draw it again: same graph, new random start.';
 
 let phase, beats, o, links, L, running, maps, seed, ci, level, sel, view, wrong, tried, qsel, tip, res, rsel, lastSync, told;
 
@@ -64,8 +63,8 @@ function sync() {
 function showBook() {
   const b = k => '<span class="p" data-b="' + k + '"></span>';
   G.book.show({
-    floor: 'Floor 2 · Station 2-5', room: 'The Map table', aim: 'Draw the neighbour graph as a flat map, twice, and work out which features of a map can be trusted.',
-    codeFirst: true, file: 'js/umap.js',
+    floor: 'The Cloud · Station 2-5', room: 'The Map table', aim: 'Draw the neighbour graph as a flat map, twice, and work out which features of a map can be trusted.',
+    codeFirst: true, file: 'js/stages/map/umap.js',
     goals: [
       { id: 'unfold', text: 'Draw the map and let it settle' },
       { id: 'shake', text: 'Draw it again from new random positions' },
@@ -74,7 +73,7 @@ function showBook() {
     notes: [
       { id: 'u-what', open: true, html: 'UMAP draws the neighbour graph on a flat surface. Linked cells are pulled together and all other cells are pushed apart until the picture settles. <b>The map is a drawing of the graph.</b> The graph is what you analyse.' },
       { id: 'u-seed', html: 'The layout has to start somewhere, and it uses random numbers along the way. A different random seed gives a different picture of the same graph. <b>Fix the seed and report it.</b>' },
-      { id: 'u-trust', html: '<b>You can trust</b> which cells sit together. <b>Do not interpret</b> where an island sits, how far it is from another island, or how large it looks. Those depend on the layout and its settings.' },
+      { id: 'u-trust', html: '<b>You can trust</b> which cells share an island. <b>Do not interpret</b> where an island sits, how far it is from another island, or how large it looks. Those depend on the layout and its settings.' },
       { id: 'u-colour', html: 'Colour the map by marker genes to see which island is which cell type. Colour it by sequencing depth to check that depth is not what separates your islands.' },
       { id: 'u-init', html: 'This table starts from random positions, which exaggerates the effect. Real UMAP starts from a rough first guess (a spectral layout, or the principal components), so its maps change less between runs and keep more of the large-scale arrangement. They are still drawings.' },
     ],
@@ -128,6 +127,7 @@ function act() {
 G.scenes.umap = {
   phase: () => phase,
   enter() {
+    COLOURS = G.sys.umap.colours.concat([['DEPTH', 'SEQUENCING DEPTH']]);
     const cl = G.cloud; cl.scores();
     o = cl.settings(); links = cl.web(o.k, o.dims).links;
     seed = 1; maps = []; L = null; running = false; sel = 0; wrong = 0; tried = {}; tip = null; told = G.state.tries.umap > 0; res = null; rsel = 0; lastSync = null; view = null;

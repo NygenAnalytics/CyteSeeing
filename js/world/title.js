@@ -23,7 +23,7 @@ const WORD = G.NAME.toUpperCase().replace(/[^A-Z]/g, '');
 /* long names get smaller cells so the logo always fits the screen */
 const PITCH = [6, 5, 4].find(p => p * (6 * WORD.length - 1) <= 312) || 4, LX = Math.round((VW - (WORD.length * 5 * PITCH + (WORD.length - 1) * PITCH)) / 2), LY = 22;
 const TAGS = [
-  'OPEN SOURCE. FORK IT ON GITHUB.',
+  'OPEN SOURCE. FORK IT ON GITHUB.', 'TWO PROJECTS: BLOOD AND BRAIN. MORE ON THE WAY.',
   'NO CELLS WERE HARMED. MANY WERE LYSED.', 'NOW WITH 90% MORE ZEROS.', 'BATCH EFFECTS SOLD SEPARATELY.',
   'PEER REVIEWED BY NOBODY. YET.', 'A UMAP IS A MAP, NOT A RESULT.', 'DOUBLETS INCLUDED AT NO EXTRA COST.',
 ];
@@ -59,7 +59,7 @@ G.scenes.title = {
     matrix.forEach(m => { m.flash = Math.max(0, m.flash - dt * 1.6); });
     /* counts decay back to zero now and then, so the matrix stays sparse */
     if (rnd() < dt * 9) { const m = matrix[Math.floor(rnd() * matrix.length)]; if (m.v > 0) m.v--; }
-    if (G.t - t0 > 0.4 && (G.hit('a') || G.ptr.pressed)) { G.sfx('ok'); G.go('corridor'); }
+    if (G.t - t0 > 0.4 && (G.hit('a') || G.ptr.pressed)) { G.sfx('ok'); G.go(G.scenario() ? 'corridor' : G.profile.name ? 'corridor' : 'start', G.scenario() ? {} : { floor: 'bay' }); }
   },
   draw() {
     const bands = ['#0b1226', '#0d1630', '#101b3a', '#132045', '#16254f'];

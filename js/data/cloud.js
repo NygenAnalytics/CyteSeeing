@@ -6,35 +6,18 @@
 'use strict';
 const C = G.C;
 
-const TYPES = [
-  { id: 'T', name: 'T CELLS', n: 60, col: C.cyan, size: 0.95 }, { id: 'NK', name: 'NK CELLS', n: 26, col: C.mint, size: 1 },
-  { id: 'B', name: 'B CELLS', n: 34, col: C.lilac, size: 0.95 }, { id: 'MONO', name: 'MONOCYTES', n: 46, col: C.amber, size: 1.1 },
-  { id: 'DC', name: 'DENDRITIC', n: 8, col: C.pink, size: 1.05 },
-];
-/* name, kind, then the mean count in T, NK, B, monocytes and dendritic cells at average depth */
-const DEF = [
-  ['ACTB', 'house', 600], ['MALAT1', 'house', 800], ['B2M', 'house', 500], ['EEF1A1', 'house', 400],
-  ['TMSB4X', 'house', 450], ['FTL', 'house', 300], ['TPT1', 'house', 350], ['GAPDH', 'house', 250],
-  ['RPL13', 'ribo', 400], ['RPS27', 'ribo', 450], ['RPLP1', 'ribo', 350], ['RPS12', 'ribo', 300], ['MT-CO1', 'ribo', 250], ['MT-ND1', 'ribo', 200],
-  ['IL32', 'mark', 60, 55, 0, 0, 0], ['CD7', 'mark', 50, 55, 0, 0, 0], ['CD2', 'mark', 50, 45, 0, 0, 0], ['CCL5', 'mark', 40, 55, 0, 0, 0], ['CTSW', 'mark', 30, 45, 0, 0, 0],
-  ['CD3E', 'mark', 25, 0, 0, 0, 0], ['CD3D', 'mark', 20, 0, 0, 0, 0], ['IL7R', 'mark', 20, 0, 0, 0, 0], ['TRAC', 'mark', 25, 0, 0, 0, 0], ['LTB', 'mark', 15, 0, 30, 0, 0],
-  ['NKG7', 'mark', 5, 35, 0, 0, 0], ['GNLY', 'mark', 3, 40, 0, 0, 0], ['KLRD1', 'mark', 2, 15, 0, 0, 0], ['PRF1', 'mark', 3, 15, 0, 0, 0],
-  ['MS4A1', 'mark', 0, 0, 60, 0, 0], ['CD79A', 'mark', 0, 0, 70, 0, 0], ['CD79B', 'mark', 0, 0, 50, 0, 0], ['CD74', 'mark', 5, 5, 120, 80, 85],
-  ['HLA-DRA', 'mark', 3, 3, 100, 80, 85], ['IGHM', 'mark', 0, 0, 60, 0, 0], ['BANK1', 'mark', 0, 0, 30, 0, 0],
-  ['LYZ', 'mark', 2, 2, 2, 140, 115], ['S100A8', 'mark', 1, 1, 1, 120, 95], ['S100A9', 'mark', 1, 1, 1, 140, 110], ['CD14', 'mark', 0, 0, 0, 50, 38],
-  ['FCN1', 'mark', 0, 0, 0, 60, 46], ['CST3', 'mark', 2, 2, 5, 100, 100], ['TYROBP', 'mark', 5, 50, 2, 80, 70], ['AIF1', 'mark', 2, 2, 2, 60, 55],
-  ['FCER1A', 'rare', 0, 0, 0, 0, 16], ['CLEC10A', 'rare', 0, 0, 0, 0, 12], ['CD1C', 'rare', 0, 0, 0, 0, 10], ['ENHO', 'rare', 0, 0, 0, 0, 8],
-];
-
-const cloud = G.cloud = { TYPES, genes: [], cells: [], X: [] };
+/* which cells and which genes: the active cell system says (js/systems). The colours go by position. */
+const COLS = [C.cyan, C.mint, C.lilac, C.amber, C.pink];
+const cloud = G.cloud = { TYPES: [], genes: [], cells: [], X: [] };
 
 function gaussOf(rnd) { return () => { let u = 0; for (let i = 0; i < 6; i++) u += rnd(); return (u - 3) / 0.7071; }; }
-const median = v => { const s = Array.from(v).sort((a, b) => a - b), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
-cloud.median = median;
+const median = G.maths.median;
+cloud.median = median; cloud.pca = G.maths.pca;
 
 /* build the matrix once; the same seed always gives the same cells */
 cloud.build = function () {
   if (cloud.X.length) return;
+  const TYPES = cloud.TYPES = G.sys.cloud.types.map((t, i) => Object.assign({ col: COLS[i] }, t)), DEF = G.sys.cloud.genes;
   const rnd = G.rng(2024), gauss = gaussOf(rnd);
   const pois = lam => {
     if (lam > 30) return Math.max(0, Math.round(lam + Math.sqrt(lam) * gauss()));
@@ -95,38 +78,10 @@ cloud.pick = function (st, method, n, block) {
     .sort((a, b) => (method === 'raw' ? b.lv - a.lv : b.score - a.score)).slice(0, n).map(g => g.j);
 };
 
-/* PCA by power iteration on the covariance of the chosen genes. scale: give each gene unit variance first. */
-cloud.pca = function (M, cols, k, scale) {
-  const n = M.length, g = cols.length, Z = [];
-  const mu = new Float64Array(g), sd = new Float64Array(g);
-  cols.forEach((c, j) => { let s = 0; for (let i = 0; i < n; i++) s += M[i][c]; mu[j] = s / n; let q = 0; for (let i = 0; i < n; i++) q += (M[i][c] - mu[j]) * (M[i][c] - mu[j]); sd[j] = Math.sqrt(q / (n - 1)) || 1; });
-  for (let i = 0; i < n; i++) { const r = new Float64Array(g); for (let j = 0; j < g; j++) { let z = M[i][cols[j]] - mu[j]; if (scale) z = Math.max(-10, Math.min(10, z / sd[j])); r[j] = z; } Z.push(r); }
-  const cov = []; let tot = 0;
-  for (let a = 0; a < g; a++) { cov.push(new Float64Array(g)); }
-  for (let a = 0; a < g; a++) for (let b = a; b < g; b++) { let s = 0; for (let i = 0; i < n; i++) s += Z[i][a] * Z[i][b]; cov[a][b] = cov[b][a] = s / (n - 1); }
-  for (let a = 0; a < g; a++) tot += cov[a][a];
-  const rnd = G.rng(7), vecs = [], ev = [];
-  k = Math.min(k, g);
-  for (let c = 0; c < k; c++) {
-    let v = new Float64Array(g); for (let j = 0; j < g; j++) v[j] = rnd() - 0.5;
-    let lam = 0;
-    for (let it = 0; it < 120; it++) {
-      const w = new Float64Array(g);
-      for (let a = 0; a < g; a++) { let s = 0; for (let b = 0; b < g; b++) s += cov[a][b] * v[b]; w[a] = s; }
-      vecs.forEach(u => { let d = 0; for (let j = 0; j < g; j++) d += w[j] * u[j]; for (let j = 0; j < g; j++) w[j] -= d * u[j]; });
-      let nrm = 0; for (let j = 0; j < g; j++) nrm += w[j] * w[j]; nrm = Math.sqrt(nrm) || 1;
-      for (let j = 0; j < g; j++) w[j] /= nrm;
-      lam = nrm; v = w;
-    }
-    vecs.push(v); ev.push(lam);
-  }
-  const S = Z.map(r => vecs.map(v => { let s = 0; for (let j = 0; j < g; j++) s += r[j] * v[j]; return s; }));
-  return { S, ev, tot, vecs, cols };
-};
 
 /* for each kind of cell: the share of a cell's nearest neighbours, in the first `dims` components, that are its own kind */
 cloud.purity = function (S, dims, kn) {
-  const n = S.length, by = TYPES.map(() => [0, 0]); kn = kn || 5;
+  const n = S.length, by = cloud.TYPES.map(() => [0, 0]); kn = kn || 5;
   for (let i = 0; i < n; i++) {
     const d = [];
     for (let j = 0; j < n; j++) { if (j === i) continue; let s = 0; for (let c = 0; c < dims; c++) { const q = S[i][c] - S[j][c]; s += q * q; } d.push([s, cloud.cells[j].type]); }
@@ -154,6 +109,8 @@ cloud.settings = function () {
 /* ---------- from components to neighbours to a map ---------- */
 /* the components the later stations work on: a PCA of the picked genes, kept until the gene list changes */
 let emb = null;
+/* another cell system, or another project: forget these cells */
+cloud.reset = function () { cloud.TYPES = []; cloud.genes = []; cloud.cells = []; cloud.X = []; emb = null; };
 cloud.scores = function () {
   cloud.build();
   const o = cloud.settings(), key = [o.method, o.n, o.block].join('|');
@@ -179,7 +136,7 @@ cloud.nearest = function (dims) {
 /* the web: every cell linked to its k nearest. Returns the links once each, and what they say about the cells. */
 cloud.web = function (k, dims) {
   const near = cloud.nearest(dims), n = near.length, type = cloud.cells.map(c => c.type), seen = {}, links = [];
-  let cross = 0; const own = TYPES.map(() => [0, 0]);
+  const TYPES = cloud.TYPES; let cross = 0; const own = TYPES.map(() => [0, 0]);
   for (let i = 0; i < n; i++) for (let q = 0; q < k; q++) {
     const j = near[i][q], key = i < j ? i * 1000 + j : j * 1000 + i;
     own[type[i]][1]++; if (type[j] === type[i]) own[type[i]][0]++;

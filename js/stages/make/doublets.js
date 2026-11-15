@@ -11,7 +11,8 @@ const CL = [
   { x: 58, y: 44, sd: 9.5, n: 60, c: C.cyan }, { x: 150, y: 38, sd: 8, n: 34, c: C.lilac },
   { x: 146, y: 98, sd: 9.5, n: 46, c: C.amber }, { x: 56, y: 106, sd: 6.5, n: 26, c: C.mint },
 ];
-const NAMES = [['T', 12, 18, 'left'], ['B', 186, 18, 'right'], ['MONO', 186, 116, 'right'], ['NK', 12, 116, 'left']];
+/* where the name of each group goes; the names come from the cell system (js/systems) */
+const NAMES = [[12, 18, 'left'], [186, 18, 'right'], [186, 116, 'right'], [12, 116, 'left']];
 
 const INTRO = [
   { spot: [EX - 1, EY - 1, EW + 2, EH + 2], say: 'The doublets from room 1-1 are still in here. On this map, similar cells sit together.' },
@@ -37,7 +38,7 @@ function build() {
   const gauss = () => { let u = 0; for (let i = 0; i < 6; i++) u += rnd(); return (u - 3) / 0.7071; };
   const c = [];
   CL.forEach((k, ci) => { for (let i = 0; i < k.n; i++) c.push({ x: k.x + gauss() * k.sd, y: k.y + gauss() * k.sd, kind: 's', from: ci }); });
-  /* cells in a real transition between T and NK: between clusters, and not doublets */
+  /* cells in a real transition between the first group and the last: between clusters, and not doublets */
   for (let i = 0; i < 10; i++) { const f = 0.12 + 0.76 * i / 9; c.push({ x: G.lerp(58, 56, f) + gauss() * 2.5, y: G.lerp(58, 97, f) + gauss() * 2, kind: 't', from: 0 }); }
   const singles = c.slice(0, 166);
   /* the more you loaded per lane, the more of these there are */
@@ -97,14 +98,14 @@ function showBook() {
   const num = w => '<input class="p" data-p="thr" id="d-thr-' + w + '" type="number" step="0.05" min="0.3" max="1" inputmode="decimal" aria-label="score cut-off">';
   const dbr = '<span class="p" data-b="dbr"></span>';
   G.book.show({
-    floor: 'Ground floor · Room 1-5', room: 'The doublet hunt', aim: 'Find the droplets that hold two cells. Remove them without losing real cells.', codeFirst: true, file: 'js/doublets.js',
+    floor: 'Core facility · Room 1-5', room: 'The doublet hunt', aim: 'Find the droplets that hold two cells. Remove them without losing real cells.', codeFirst: true, file: 'js/stages/make/doublets.js',
     goals: [
       { id: 'catch', text: 'Catch at least 80% of the two-type doublets' },
       { id: 'spare', text: 'Remove no more than 2 real single cells' },
     ],
     notes: [
       { id: 'x-what', open: true, html: 'A doublet of two different cell types shows <b>the marker genes of both</b> and sits between clusters. If it is left in, it can be mistaken for a new cell type.' },
-      { id: 'x-sim', html: 'Doublet callers build <b>artificial doublets</b> from random pairs of cells, then score each real cell by the share of artificial doublets among its nearest neighbours.' },
+      { id: 'x-sim', html: 'Doublet callers build <b>artificial doublets</b> from random pairs of cells, then score each real cell by the share of artificial doublets among its nearest neighbours. Scrublet uses that share as the score. scDblFinder feeds it to a classifier.' },
       { id: 'x-rate', html: 'Check the number you flag against the rate you expect from loading: about <b>0.8% per 1,000 cells</b>. Run the caller on <b>each lane by itself</b>, never on lanes pooled together.' },
       { id: 'x-homo', html: 'Doublets of two cells of the <b>same type</b> are almost impossible to detect, because they look like one large cell. Cells in a real transition between two types also sit between clusters, so do not remove everything in between.' },
     ],
@@ -216,7 +217,7 @@ G.scenes.doublet = {
 
 function drawMap() {
   R(EX - 1, EY - 1, EW + 2, EH + 2, C.slate); R(EX, EY, EW, EH, '#0e1630');
-  CL.forEach((k, i) => T(NAMES[i][0], NAMES[i][1], NAMES[i][2], k.c, { a: NAMES[i][3] }));
+  CL.forEach((k, i) => T(G.sys.doublets.names[i], NAMES[i][0], NAMES[i][1], k.c, { a: NAMES[i][2] }));
   const simT = phase === 'sim' ? pt : phase === 'score' || phase === 'result' ? 99 : -1, blink = Math.floor(G.t * 4) % 2 === 0;
   if (simT >= 0) ghosts.forEach(g => {
     const age = simT - g.at;
@@ -236,7 +237,7 @@ function drawMap() {
     R(o.x - 1, o.y - 1, 2, 2, col);
     if (f) G.ring(o.x, o.y, 3, C.coral);
   });
-  if (phase === 'sim' || phase === 'score') T('HOLLOW: ARTIFICIAL DOUBLETS', EX + EW / 2, EY + 3, '#8a6f9e', { a: 'center' });
+  if (phase === 'sim' || phase === 'score') T('HOLLOW: ARTIFICIAL', EX + EW / 2, EY + 3, '#8a6f9e', { a: 'center' });
 }
 
 function drawSide() {

@@ -49,36 +49,88 @@ function fresh() {
       soup: { done: false, stars: 0 }, doublet: { done: false, stars: 0 }, review: { done: false, stars: 0 },
       norm: { done: false, stars: 0 }, hvg: { done: false, stars: 0 }, pca: { done: false, stars: 0 },
       knn: { done: false, stars: 0 }, umap: { done: false, stars: 0 }, club: { done: false, stars: 0 },
+      cut: { done: false, stars: 0 }, lineup: { done: false, stars: 0 }, name: { done: false, stars: 0 },
+      oracle: { done: false, stars: 0 }, chief: { done: false, stars: 0 },
+      sort: { done: false, stars: 0 }, wash: { done: false, stars: 0 }, lost: { done: false, stars: 0 }, counter: { done: false, stars: 0 },
     },
-    floor: 'g',      // which floor the player is on
+    floor: 'make',   // which stage the player is in
     cloud: null,     // the choices made on floor 2: { depth, log, method, n, block, dims, k, seed, pack }
+    bureau: null,    // the case on floor 3: { res, fix, pins, names, ref }
+    laundry: null,   // the wash on floor 4: { theta }
     load: null,      // what you loaded in 1-1: { R, lanes, singlets, doublets, rate }
     calls: null,     // what you called in 1-2: { called, recall, empties, doublets }
     qc: null,        // what you filtered in 1-3
     soup: null,      // what you corrected in 1-4
     dbl: null,       // what you removed in 1-5
-    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0 },
+    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0, cut: 0, lineup: 0, name: 0, oracle: 0, chief: 0, sort: 0, wash: 0, lost: 0, counter: 0 },
     notes: {},       // field notes unlocked so far
     eggs: {}, met: false, sound: false,
   };
 }
 G.state = fresh();
-G.loadSave = function () {
-  try {
-    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+/* who is playing and which project they are on. Each project keeps its own progress; the first
+   one keeps the key the game has always used, so an old save is still there. */
+const PROFILE_KEY = 'cyteseeing-profile-v1', OLD_FLOORS = { g: 'make', 2: 'map', 3: 'who', 4: 'runs' };
+const slotKey = id => (!id || id === 'response' ? SAVE_KEY : SAVE_KEY + ':' + id);
+G.profile = { name: '', scenario: null, sound: false };
+function readSlot(id) {
+  let st = fresh();
+  if (id) try {
+    const s = JSON.parse(localStorage.getItem(slotKey(id)) || 'null');
     if (s && s.rooms) {
-      const f = fresh();
-      G.state = Object.assign(f, s);
-      G.state.rooms = Object.assign(fresh().rooms, s.rooms);
-      G.state.tries = Object.assign(fresh().tries, s.tries || {});
+      st = Object.assign(fresh(), s);
+      st.rooms = Object.assign(fresh().rooms, s.rooms);
+      st.tries = Object.assign(fresh().tries, s.tries || {});
+      st.floor = OLD_FLOORS[st.floor] || st.floor;
     }
   } catch (e) { /* storage can be blocked; the game still runs */ }
+  st.sound = G.profile.sound;
+  return st;
+}
+G.loadSave = function () {
+  try {
+    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+    if (p) Object.assign(G.profile, p);
+    else {
+      /* a save from before there were projects belongs to the first project */
+      const old = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (old && old.rooms && (old.met || old.rooms.droplets.done)) { G.profile.scenario = 'response'; G.profile.sound = !!old.sound; }
+    }
+  } catch (e) {}
+  G.state = readSlot(G.profile.scenario);
 };
-G.save = function () { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.state)); } catch (e) {} };
-G.resetSave = function () { const snd = G.state.sound; G.state = fresh(); G.state.sound = snd; G.save(); };
-G.hasProgress = () => G.state.met || G.state.rooms.droplets.done;
-G.totalStars = () => Object.keys(G.state.rooms).reduce((n, k) => n + G.state.rooms[k].stars, 0);
-G.maxStars = () => Object.keys(G.state.rooms).length * 3;
+G.save = function () {
+  try {
+    G.profile.sound = !!G.state.sound;
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(G.profile));
+    if (G.profile.scenario) localStorage.setItem(slotKey(G.profile.scenario), JSON.stringify(G.state));
+  } catch (e) {}
+};
+/* take up a project: its own progress, its own cells. What the last project worked out is dropped. */
+G.setScenario = function (id) {
+  if (G.profile.scenario) G.save();
+  G.profile.scenario = id;
+  G.state = readSlot(id);
+  ['cloud', 'atlas', 'loads'].forEach(k => { if (G[k] && G[k].reset) G[k].reset(); });
+  G.sys = id && G.SCENARIOS[id] && G.systems ? G.systems[G.SCENARIOS[id].system] || null : null;
+  G.save();
+};
+G.scenario = () => (G.profile.scenario && G.SCENARIOS ? G.SCENARIOS[G.profile.scenario] : null);
+/* the stages of the current project that exist for its cells, in order */
+G.route = () => { const sc = G.scenario(); return sc ? sc.route.filter(G.playable) : []; };
+G.resetSave = function () {
+  const snd = G.profile.sound;
+  try { Object.keys(G.SCENARIOS || {}).forEach(id => localStorage.removeItem(slotKey(id))); localStorage.removeItem(PROFILE_KEY); } catch (e) {}
+  G.profile = { name: '', scenario: null, sound: snd };
+  G.setScenario(null);
+};
+G.hasProgress = () => !!G.profile.scenario;
+/* what the player is called */
+G.you = () => (G.profile.name || 'ARI');
+/* stars count over the rooms of the current project */
+const counted = () => { const out = []; G.route().forEach(id => { const st = G.STAGES[id]; st.rooms.concat(st.extra || []).forEach(r => out.push(r)); }); return out; };
+G.totalStars = () => counted().reduce((n, k) => n + G.state.rooms[k].stars, 0);
+G.maxStars = () => counted().length * 3;
 
 /* ================= utils ================= */
 G.fmt = n => Math.round(n).toLocaleString('en-US');
@@ -196,6 +248,7 @@ G.person = (x, y, L, o) => {
   if (L.style === 'long') { R(px + 1, py + 1, 1, 7, L.hair); R(px + 8, py + 1, 1, 7, L.hair); }
   if (L.style === 'bun') R(px + 4, py - 2, 3, 2, L.hair);
   if (L.style === 'curly') { R(px + 1, py, 1, 3, L.hair); R(px + 8, py, 1, 3, L.hair); R(px + 3, py - 1, 4, 1, L.hair); }
+  if (L.hat) { R(px + 1, py + 1, 8, 1, L.hat); R(px + 3, py - 1, 4, 2, L.hat); }
   R(dir > 0 ? px + 6 : px + 3, py + 3, 1, 1, C.ink);
   if (L.glasses) R(dir > 0 ? px + 5 : px + 2, py + 3, 3, 1, C.ink);
 };
@@ -212,6 +265,8 @@ G.star = (x, y, on) => {
   const c = on ? C.amber : C.slate;
   STAR.forEach((row, j) => { for (let i = 0; i < 7; i++) if (row[i] === '#') R(x + i, y + j, 1, 1, c); });
 };
+/* corner marks around a box [x, y, w, h] */
+G.corners = function (b, c) { [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(k => { const x = b[0] + k[0] * b[2], y = b[1] + k[1] * b[3]; R(x - (k[0] ? 4 : 0), y, 5, 1, c); R(x, y - (k[1] ? 4 : 0), 1, 5, c); }); };
 G.stars = (x, y, n) => { for (let i = 0; i < 3; i++) G.star(x + i * 9, y, i < n); };
 
 /* ================= input ================= */
@@ -225,6 +280,8 @@ const down = G.down = {}, hit = {}, held = {};
 const isField = el => el && el !== cv && /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(el.tagName);
 window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || isField(e.target)) return;
+  /* a scene that takes typing (signing in) gets the key first */
+  if (G.rawKey && G.rawKey(e)) { e.preventDefault(); return; }
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (key === 'm') { G.toggleSound(); return; }
   if (key === 'f' && G.toggleFull) { G.toggleFull(); return; }
@@ -347,18 +404,18 @@ G.strip = function (y0) { R(0, y0, VW, VH - y0, '#0e1630'); R(0, y0, VW, 1, C.sl
    headline and two buttons. resultDraw returns 'retry', 'keep' or null; resultKeys does the
    same for the keyboard. Both stay quiet while the mentor is still talking. */
 let vd = null;
-G.resultHead = function (y0, pass) {
+G.resultHead = function (y0, pass, head) {
   G.strip(y0);
-  T(pass ? 'PASSED' : 'NOT YET', 10, y0 + 5, pass ? C.mint : C.coral, { f: 'lg' });
+  T(head || (pass ? 'PASSED' : 'NOT YET'), 10, y0 + 5, pass ? C.mint : C.coral, { f: 'lg' });
 };
 function verdictFor(msg) {
   if (!vd || vd.key !== msg || G.frame - vd.seen > 2) vd = { key: msg, beats: new G.Beats([{ say: msg }]), done: false };
   vd.seen = G.frame;
   return vd;
 }
-G.resultDraw = function (y0, msg, pass, rsel, a, b) {
+G.resultDraw = function (y0, msg, pass, rsel, a, b, head) {
   const v = verdictFor(msg);
-  G.resultHead(y0, pass);
+  G.resultHead(y0, pass, head);
   if (!v.done) { v.beats.draw(); return null; }
   let act = null;
   if (G.button('res-a', 10, y0 + 29, 104, 15, a, { focus: rsel === 0 || !pass })) act = 'retry';
@@ -416,11 +473,15 @@ const SPEAKER = /^([A-Z0-9 .'-]{2,16}): /;
 G.LOOKS = {
   MIKA: { skin: C.skin2, hair: '#1b1b2a', style: 'bun', coat: '#2f9e8f', shirt: C.paper, glasses: true },
   NOOR: { skin: C.skin3, hair: '#15101f', style: 'long', coat: '#5a3f8c', shirt: '#2a2140' },
-  'PHD STUDENT': { skin: C.skin3, hair: '#20182a', style: 'short', coat: '#5b6ea8', shirt: '#5b6ea8' },
+  TOMO: { skin: C.skin3, hair: '#20182a', style: 'short', coat: '#5b6ea8', shirt: '#5b6ea8' },
   YOU: { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, shirt: C.cyan },
   'REVIEWER 2': { shade: true },
+  IDA: { skin: C.skin2, hair: '#5a2a1a', style: 'short', coat: '#b08a55', shirt: '#2a2a33', hat: '#6b5230' },
+  CHIEF: { skin: C.skin1, hair: '#9aa0ad', style: 'short', coat: '#3a3f4f', shirt: C.paper, tash: '#9aa0ad' },
+  BEA: { skin: C.skin3, hair: '#d9d3c4', style: 'bun', coat: '#3f8fb5', shirt: C.paper, glasses: true },
+  VERA: { skin: C.skin2, hair: '#3a2f3a', style: 'long', coat: '#7a2f45', shirt: '#e8d9a8' },
 };
-G.mentor = () => (G.state.floor === '2' ? 'NOOR' : 'MIKA');
+G.mentor = () => (G.scene() === 'campus' || G.scene() === 'bay' ? 'VERA' : (G.STAGES[G.state.floor] || {}).mentor || 'MIKA');
 /* a 16 by 16 portrait */
 G.face = function (x, y, k, talking) {
   R(x, y, 16, 16, '#101a36');
@@ -430,6 +491,8 @@ G.face = function (x, y, k, talking) {
   const side = k.style === 'long' ? 12 : 4;
   R(x + 2, y + 1, 12, 4, k.hair); R(x + 2, y + 3, 2, side, k.hair); R(x + 12, y + 3, 2, side, k.hair);
   if (k.style === 'bun') R(x + 6, y, 4, 2, k.hair);
+  if (k.hat) { R(x + 1, y + 3, 14, 2, k.hat); R(x + 4, y, 8, 3, k.hat); R(x + 4, y + 2, 8, 1, C.ink); }
+  if (k.tash) R(x + 5, y + 10, 6, 1, k.tash);
   R(x + 5, y + 7, 2, 2, C.ink); R(x + 9, y + 7, 2, 2, C.ink);
   if (k.glasses) { R(x + 4, y + 6, 4, 1, C.fog); R(x + 8, y + 6, 4, 1, C.fog); R(x + 4, y + 9, 4, 1, C.fog); R(x + 8, y + 9, 4, 1, C.fog); R(x + 4, y + 6, 1, 4, C.fog); R(x + 11, y + 6, 1, 4, C.fog); }
   R(x + 6, y + 11, 4, talking && Math.floor(G.t * 9) % 2 ? 2 : 1, '#7a3f3f');
@@ -448,12 +511,12 @@ G.caption = function (text, t, o) {
   const full = n >= total;
   G.panel(x, y, w, h, { border: o.border || C.fog, fill: C.ink });
   if (who) {
-    const ww = Math.ceil(G.tw(who, 'smb')) + 8;
+    const tag = who === 'YOU' ? G.you() : who, ww = Math.ceil(G.tw(tag, 'smb')) + 8;
     /* above the box when it sits at the bottom; under its right end when it sits at the top,
        where a third line of text would otherwise run into it */
     const ty = o.top ? y + h - 4 : y - 7, tx = o.top ? x + w - ww - 6 : x + 6;
     G.panel(tx, ty, ww, 11, { border: o.border || C.fog, fill: o.accent || C.teal });
-    T(who, tx + 4, ty + 1, C.white, { f: 'smb' });
+    T(tag, tx + 4, ty + 1, C.white, { f: 'smb' });
   }
   if (look) { R(x + 6, y + 7, 18, 18, o.border || C.fog); G.face(x + 7, y + 8, look, !full); }
   for (let i = 0; i < lines.length && i < 3; i++) {
@@ -481,16 +544,21 @@ G.pages = function (text) {
    A line can carry a `spot` [x, y, w, h]: that part of the screen is lit while it is said. */
 G.Beats = function (list) {
   this.list = [];
-  list.forEach(b => G.pages(b.say).forEach(say => this.list.push(Object.assign({}, b, { say }))));
+  /* a line can be a function, for words that are only known once the game is running */
+  list.forEach(b => G.pages(typeof b.say === 'function' ? b.say() : b.say).forEach(say => this.list.push(Object.assign({}, b, { say }))));
   this.i = 0; this.t = 0; this.full = false;
 };
 G.Beats.prototype.cur = function () { return this.list[this.i]; };
+/* the action key, except in the moment after somebody has finished talking */
+G.act = () => G.hit('a') && G.t >= (G.quiet || 0);
 G.Beats.prototype.update = function (dt) {
   this.t += dt;
   const fwd = G.hit('a') || G.hit('right') || G.ptr.pressed;
   if (fwd) {
     if (!this.full) { this.t = 99; return null; }
     if (this.i < this.list.length - 1) { this.i++; this.t = 0; this.full = false; G.sfx('blip'); return 'next'; }
+    /* the press that ends a speech is often followed by one press too many: G.act() ignores that one */
+    G.quiet = G.t + 0.35;
     return 'done';
   }
   if (G.hit('left') && this.i > 0) { this.i--; this.t = 99; return 'prev'; }
@@ -563,7 +631,13 @@ let cur = null, curName = '', next = null, fade = 1, fadeDir = -1;
 G.scene = () => curName;
 G.go = function (name, args) {
   if (next) return;
-  next = { name, args }; fadeDir = 1;
+  next = { name, args, ready: true }; fadeDir = 1;
+  /* a scene's script, and what it stands on, is fetched the first time it is wanted (loader.js) */
+  const wait = G.ready ? G.ready(name, args || {}) : null;
+  if (wait) {
+    next.ready = false; const mine = next;
+    wait.then(() => { mine.ready = true; }, () => { if (next === mine) { next = null; fadeDir = -1; } G.toast('THAT DID NOT LOAD. CHECK THE CONNECTION AND TRY AGAIN.', 5); });
+  }
 };
 function swap() {
   if (cur && cur.leave) cur.leave();
@@ -584,7 +658,7 @@ function frame(now) {
   });
   if (fadeDir === 1) {
     fade += dt * 5;
-    if (fade >= 1) { fade = 1; swap(); fadeDir = -1; }
+    if (fade >= 1) { fade = 1; if (next.ready) { swap(); fadeDir = -1; } else next.wait = (next.wait || 0) + dt; }
   } else if (fadeDir === -1) {
     fade -= dt * 4;
     if (fade <= 0) { fade = 0; fadeDir = 0; }
@@ -609,6 +683,8 @@ function frame(now) {
   }
   drawToast(dt);
   if (fade > 0) { ctx.globalAlpha = Math.min(1, fade); R(0, 0, VW, VH, C.ink); ctx.globalAlpha = 1; }
+  /* only said when a script takes long enough to notice */
+  if (next && !next.ready && next.wait > 0.4) T('LOADING' + '.'.repeat(1 + Math.floor(G.t * 3) % 3), VW / 2 - 22, VH / 2 - 4, C.fog);
   Object.keys(hit).forEach(k => { delete hit[k]; });
   ptr.pressed = false; ptr.released = false;
   /* a finger that has left the screen is not hovering over anything */

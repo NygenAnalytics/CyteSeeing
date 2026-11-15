@@ -87,7 +87,7 @@ function sync() {
 function showBook() {
   const num = (k, w, step) => '<input class="p" data-p="' + k + '" id="q-' + k + '-' + w + '" type="number" step="' + (step || 1) + '" inputmode="decimal" aria-label="' + k + '">';
   G.book.show({
-    floor: 'Ground floor · Room 1-3', room: 'The QC gate', aim: 'Remove the damaged cells. Keep the healthy ones, even the unusual ones.', codeFirst: true, file: 'js/qc.js',
+    floor: 'Core facility · Room 1-3', room: 'The QC gate', aim: 'Remove the damaged cells. Keep the healthy ones, even the unusual ones.', codeFirst: true, file: 'js/stages/make/qc.js',
     goals: [
       { id: 'junk', text: 'Remove at least 90% of the damaged cells and debris' },
       { id: 'healthy', text: 'Keep at least 95% of the healthy cells' },
@@ -96,7 +96,7 @@ function showBook() {
     notes: [
       { id: 'q-why', open: true, html: 'A damaged cell leaks its cytoplasmic RNA but keeps its mitochondria: <b>few genes and a high mitochondrial share, together</b>. Look at both measures at once.' },
       { id: 'q-tut', html: 'Thresholds copied from a tutorial fit that tutorial\'s tissue. Some healthy cells have few genes. Some naturally have a high mitochondrial share. <b>Read the cut-offs off your own data.</b>' },
-      { id: 'q-mad', html: 'Best practice: flag outliers by <b>median absolute deviations</b> (MADs) from the median, and stay lenient, around 5 MADs. Strict cut-offs remove small populations first.' },
+      { id: 'q-mad', html: 'Best practice: flag outliers by <b>median absolute deviations</b> (MADs) from the median, and stay lenient: about 5 MADs for genes and counts, a little tighter for the mitochondrial share. Strict cut-offs remove small populations first.' },
       { id: 'q-after', html: 'QC is not final. If a cluster later turns out to be damaged cells, come back and tighten the thresholds. Ambient RNA and doublets are separate steps: rooms 1-4 and 1-5.' },
     ],
     term: {
@@ -125,9 +125,9 @@ function showBook() {
         { id: 'ca', label: 'Python · CyteArc', html:
           '<pre class="code"><span class="hl" data-on="mode=hand"><span class="c"># cut-offs set by hand</span>\n' +
           'kept = ds.qc.<span class="k">filter</span>(\n    attrs=[<span class="s">"RNA_nFeatures"</span>, <span class="s">"RNA_percentMito"</span>],\n' +
-          '    lows=[' + num('genes', 'ca') + ', 0],\n    highs=[10000, ' + num('mito', 'ca', 0.5) + '],\n    cell_selection=cells)</span>\n\n' +
+          '    lows=[' + num('genes', 'ca') + ', None],\n    highs=[None, ' + num('mito', 'ca', 0.5) + '],\n    cell_selection=cells,\n    keep_bounds=True)</span>\n\n' +
           '<span class="hl" data-on="mode=mad"><span class="c"># or robust bounds: n scaled MADs from the median</span>\n' +
-          'kept = ds.qc.<span class="k">auto_filter</span>(\n    cell_selection=cells, n_mads=' + num('nmad', 'ca') + ')</span></pre>' },
+          'kept = ds.qc.<span class="k">auto_filter</span>(\n    attrs=[<span class="s">"RNA_nFeatures"</span>, <span class="s">"RNA_percentMito"</span>],\n    cell_selection=cells, n_mads=' + num('nmad', 'ca') + ')</span></pre>' },
       ],
       tip: 'The dimmed block is the one you are not using right now.',
     },

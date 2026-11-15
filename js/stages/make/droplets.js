@@ -60,14 +60,14 @@ function resetStream() { planned = []; cells = []; beads = []; drops = []; lastP
 
 function showBook() {
   G.book.show({
-    floor: 'Ground floor · Room 1-1', room: 'The droplet bay', aim: 'Load the chip so that you get enough single cells without too many doublets.', file: 'js/droplets.js',
+    floor: 'Core facility · Room 1-1', room: 'The droplet bay', aim: 'Load the chip so that you get enough single cells without too many doublets.', file: 'js/stages/make/droplets.js',
     goals: [
       { id: 'cells', text: 'At least 8,000 singlets' },
       { id: 'rate', text: 'Doublets at 4% or less' },
       { id: 'lanes', text: 'Use as few lanes as you can' },
     ],
     notes: [
-      { id: 'd-bead', open: true, html: 'A droplet needs <b>one bead and one cell</b>. Beads are packed so nearly every droplet gets one. Cells are dilute, so most droplets get none.' },
+      { id: 'd-bead', open: true, html: 'A droplet needs <b>one bead and one cell</b>. Beads are packed so most droplets get one. Cells are dilute, so most droplets get none.' },
       { id: 'd-rule', html: 'Rule of thumb on a standard 10x chip: about <b>0.8% doublets per 1,000 cells recovered</b>. 10,000 cells means about 8%. The rate is set by how many cells you load, not by the instrument.' },
       { id: 'd-later', html: 'Doublets that get through are found later, in code, with tools such as <b>scDblFinder</b> or <b>Scrublet</b>. Run them on each lane by itself, never on lanes pooled together.' },
     ],

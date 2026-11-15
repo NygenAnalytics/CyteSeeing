@@ -31,7 +31,7 @@ book.show = function (cfg) {
   const link = (href, text) => '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>';
   $('nb-edit').innerHTML = 'Open source. ' + link(G.REPO, 'Fork it on GitHub') +
     (cfg.file ? ', or ' + link(G.REPO + '/edit/main/' + cfg.file, cfg.fileText || 'edit this room') + (cfg.fileTail || ' if you spot a mistake or have a better joke.')
-      : ' to change it, extend it or build the next floor.');
+      : ' to change it, extend it or build the next stage.');
   const meth = cfg.methods ? book.methods() : '';
   $('nb-meth-box').hidden = !meth;
   $('nb-meth').textContent = meth;
@@ -89,8 +89,18 @@ book.log = function () {
   if (s.rooms.pca.done && cl.dims) rows.push('Kept <b>' + cl.dims + '</b> principal components.');
   if (s.rooms.knn.done && cl.k) rows.push('Linked every cell to its <b>' + cl.k + '</b> nearest neighbours.');
   if (s.rooms.umap.done && cl.seed) rows.push('Drew the map with seed <b>' + cl.seed + '</b>. A map, not a result.');
+  const bu = s.bureau || {}, w = (G.sys && G.sys.book) || {};
+  if (s.rooms.cut.done && bu.res) rows.push('Clustered at resolution <b>' + bu.res + '</b>, then ' + (bu.fix === 'merge' ? 'merged two clusters that no gene told apart' : 'zoomed into one cluster to split it') + ': <b>8</b> clusters.');
+  if (s.rooms.lineup.done && bu.pins) rows.push('Pinned a marker gene on <b>' + bu.pins.filter(g => g).length + '</b> clusters, and took a cluster of <b>doublets</b> off the board.');
+  if (s.rooms.name.done && bu.names) rows.push('Named the clusters from their markers.');
+  if (s.rooms.oracle.done && bu.ref) rows.push('Took a second opinion from ' + w.ref + ': took one of its names, kept one of yours.');
+  const la = s.laundry || {};
+  if (s.rooms.sort.done && !s.rooms.sort.by) rows.push('Paired <b>5</b> cell types across two runs. ' + w.loner.charAt(0).toUpperCase() + w.loner.slice(1) + ' were in one run only.');
+  if (s.rooms.wash.done && la.theta) rows.push('Corrected the run with Harmony at theta <b>' + la.theta + '</b>, and checked that the ' + w.loner + ' kept their island.');
+  if (s.rooms.lost.done && !s.rooms.lost.by) rows.push('Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.');
+  if (s.rooms.counter.done && !s.rooms.counter.by) rows.push('Fixed three study designs before anything was sequenced.');
   const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
-  if (lent) rows.push('Your student ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
+  if (lent) rows.push('Tomo ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
   $('nb-log').innerHTML = rows.map(r => '<li>' + r + '</li>').join('');
 };
@@ -113,6 +123,15 @@ book.methods = function () {
   if (s.rooms.pca.done && cl.dims) m.push('Genes were scaled to unit variance and the first ' + cl.dims + ' principal components were kept.');
   if (s.rooms.knn.done && cl.k) m.push('A neighbour graph was built on these components with k = ' + cl.k + '.');
   if (s.rooms.umap.done && cl.seed) m.push('The graph was laid out in two dimensions (random seed ' + cl.seed + ') for display only.');
+  const bu = s.bureau || {}, w = (G.sys && G.sys.book) || {};
+  if (s.rooms.cut.done && bu.res) m.push('Cells were clustered on the neighbour graph by modularity optimisation (Louvain; resolution ' + bu.res + '), and ' +
+    (bu.fix === 'merge' ? 'two clusters without distinguishing genes were merged' : 'one cluster was sub-clustered') + ', giving 8 clusters.');
+  if (s.rooms.lineup.done) m.push('Marker genes were required to be detected in at least 60% of the cells of a cluster and in at most 20% of all other cells. One cluster had no such gene, co-expressed ' + w.doublet + ' and carried more RNA per cell; it was removed as doublets.');
+  if (s.rooms.name.done) m.push('The remaining clusters were annotated manually from marker genes, to the most specific level the markers supported.');
+  if (s.rooms.oracle.done) m.push('Annotations were compared with labels transferred from ' + w.refMethods + ', and disagreements were resolved from marker genes.');
+  const la = s.laundry || {};
+  if (s.rooms.wash.done && la.theta) m.push('Two sequencing runs were analysed together. Variable genes were selected within each run, and the principal components were corrected for run with Harmony (theta = ' + la.theta + '); counts were left unchanged. The correction was checked by run mixing among nearest neighbours and by the marker genes of a population present in one run only.');
+  if (s.rooms.lost.done) m.push('A third run was mapped onto the corrected reference and labels were transferred from the 5 nearest reference cells. Transferred labels were checked against marker genes; one group of cells lacked the marker of its label and was annotated separately as ' + w.unseen + '.');
   return m.join(' ');
 };
 

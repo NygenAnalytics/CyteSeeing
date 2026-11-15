@@ -6,9 +6,10 @@
 'use strict';
 const { R, T, C, VW, VH } = G;
 
-const ROWS = ['T CELLS', 'B CELLS', 'MONOCYTES', 'NK CELLS'], SHORT = ['T', 'B', 'MONO', 'NK'], RCOL = [C.cyan, C.lilac, C.amber, C.mint];
-const GENES = ['CD3E', 'IL7R', 'MS4A1', 'LYZ', 'NKG7', 'HBB'];
-/* what each cell type really expresses, per 1,000 counts. IL7R in T cells is real but quiet. */
+/* four cell types, a gene for each and one that none of them can make: the cell system says which (js/systems) */
+let ROWS, SHORT, GENES;
+const RCOL = [C.cyan, C.lilac, C.amber, C.mint];
+/* what each cell type really expresses, per 1,000 counts. The second gene is real but quiet in the first type. */
 const REAL = [[100, 3, 0, 0, 0, 0], [0, 0, 100, 0, 0, 0], [0, 0, 0, 100, 0, 0], [0, 0, 0, 0, 100, 0]];
 /* the soup: what the empty droplets hold, per 1,000 counts. Burst red cells make it rich in HBB. */
 const SOUP = [20, 14, 10, 34, 12, 48];
@@ -18,12 +19,12 @@ const INTRO = [
   { say: 'Some cells burst before loading. Their RNA floats free and gets into every droplet. That is ambient RNA: the soup.' },
   { spot: [4, 14, 190, 114], say: 'So every cell shows a little of genes it cannot make. Big squares are real expression. Small ones may be soup.' },
   { spot: [198, 14, 118, 62], say: 'The empty droplets show what is in the soup: these bars. They do not show how much of each cell is soup.' },
-  { spot: [0, 130, VW, 50], say: 'Find that share. Pick a gene in a cell type that cannot make it, like haemoglobin, HBB. Then remove that much.' },
+  { spot: [0, 130, VW, 50], say: () => 'Find that share. Pick a gene in a cell type that cannot make it, like ' + G.sys.soup.probe + '. Then remove that much.' },
 ];
 function verdict() {
   const nums = ' You removed ' + rho + '%. The real share was ' + truth + '%.';
   if (res.stars === 3) return 'The soup is gone, and the real expression is still there, even the quiet genes.' + nums;
-  if (res.under) return 'Not enough. Cells still show genes they cannot make, like haemoglobin in T cells.' + nums;
+  if (res.under) return 'Not enough. Cells still show genes they cannot make, like ' + G.sys.soup.cannot + '.' + nums;
   return 'Too much. The soup is gone, but so is real expression that happened to be low.' + nums;
 }
 
@@ -60,7 +61,7 @@ function sync() {
 function showBook() {
   const num = w => '<input class="p" data-p="rho" id="s-rho-' + w + '" type="number" step="0.01" min="0" max="0.4" inputmode="decimal" aria-label="soup share">';
   G.book.show({
-    floor: 'Ground floor · Room 1-4', room: 'The soup kitchen', aim: 'Work out how much of every cell is soup, and take exactly that much away.', codeFirst: true, file: 'js/soup.js',
+    floor: 'Core facility · Room 1-4', room: 'The soup kitchen', aim: 'Work out how much of every cell is soup, and take exactly that much away.', codeFirst: true, file: 'js/stages/make/soup.js',
     goals: [
       { id: 'near', text: 'Get within 2 points of the real soup share' },
       { id: 'ghost', text: 'Leave no gene in a cell type that cannot make it' },
@@ -68,7 +69,7 @@ function showBook() {
     ],
     notes: [
       { id: 's-what', open: true, html: 'Ambient RNA, <b>the soup</b>, comes from cells that lysed before or during loading. Every droplet holds some, so every cell shows a low level of genes it does not express.' },
-      { id: 's-probe', html: 'To measure the share of ambient RNA, use genes that a cell type <b>cannot</b> express, such as haemoglobin in white blood cells or immunoglobulins in T cells. Every such count came from the ambient RNA.' },
+      { id: 's-probe', html: 'To measure the share of ambient RNA, use genes that a cell type <b>cannot</b> express, such as ' + G.sys.soup.note + '. Every such count came from the ambient RNA.' },
       { id: 's-over', html: 'Correction subtracts each cell\'s share of the ambient profile. <b>Removing too much also removes real expression of genes that are expressed at a low level.</b> Check a few known marker genes before and after.' },
       { id: 's-tools', html: 'Tools: <b>SoupX</b> estimates the share from marker genes and clusters. <b>CellBender</b> and <b>DecontX</b> model it for each cell.' },
     ],
@@ -139,6 +140,7 @@ function useEstimate() {
 G.scenes.soup = {
   phase: () => phase,
   enter() {
+    ROWS = G.sys.soup.rows; SHORT = G.sys.soup.short; GENES = G.sys.soup.genes;
     build();
     rho = 0; cur = { r: 0, c: 3 }; focus = 'grid'; pt = 0; res = null; rsel = 0; lastSync = null; probed = false;
     beats = new G.Beats(INTRO);

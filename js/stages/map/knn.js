@@ -57,8 +57,8 @@ function showBook() {
   const num = id => '<input class="p" data-p="kk" id="k-' + id + '" type="number" step="1" min="1" max="' + KMAX + '" inputmode="numeric" aria-label="neighbours per cell">';
   const d = '<span class="p" data-b="kdims"></span>';
   G.book.show({
-    floor: 'Floor 2 · Station 2-4', room: 'Neighbours', aim: 'Link every cell to its nearest neighbours, using a number of neighbours that keeps every cell type intact.',
-    codeFirst: true, file: 'js/knn.js',
+    floor: 'The Cloud · Station 2-4', room: 'Neighbours', aim: 'Link every cell to its nearest neighbours, using a number of neighbours that keeps every cell type intact.',
+    codeFirst: true, file: 'js/stages/map/knn.js',
     goals: [
       { id: 'whole', text: 'Every cell type stays in one piece' },
       { id: 'rare', text: 'The 8 rare cells link mostly to each other' },
@@ -67,7 +67,7 @@ function showBook() {
       { id: 'k-what', open: true, html: 'Each cell is linked to its <b>k nearest neighbours</b>, measured across the principal components you kept. The links form the <b>neighbour graph</b>. Clustering and UMAP are both computed from a neighbour graph, not from the genes.' },
       { id: 'k-few', html: 'With too few neighbours the graph is sparse and noisy. One cell type can split into pieces, which later look like separate clusters.' },
       { id: 'k-many', html: 'With too many neighbours, small populations are absorbed. A group with fewer cells than k cannot fill its neighbour lists with its own type. As a rule of thumb, keep k below the size of the smallest population you care about.' },
-      { id: 'k-real', html: 'Usual values are <b>10 to 30</b> for data sets of thousands of cells. The defaults are 15 in Scanpy, 20 in Seurat and 11 in CyteArc. This toy data has 174 cells, so the right numbers are smaller. Many tools also weight each link by how many neighbours the two cells share.' },
+      { id: 'k-real', html: 'The defaults are <b>15</b> in Scanpy, 20 in Seurat and 11 in CyteArc, and larger data sets can take more. This toy data has 174 cells, so the right numbers are smaller. Many tools also weight each link by how many neighbours the two cells share.' },
     ],
     term: {
       title: 'Same step, in code',
