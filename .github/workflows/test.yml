@@ -1,0 +1,38 @@
+name: Tests
+
+# A push to main is what the live site serves, so every push gets the quick tests.
+# The full suite plays every stage for both projects and takes about an hour: run it by hand.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "quick or full"
+        default: "full"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        working-directory: tests
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Run the tests
+        run: node tests/run.js ${{ github.event.inputs.suite || 'quick' }}
+      - name: Keep the output if something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: tests/out

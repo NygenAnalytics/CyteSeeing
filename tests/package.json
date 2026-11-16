@@ -1,0 +1,12 @@
+{
+  "name": "cyteseeing-tests",
+  "private": true,
+  "description": "Playthrough tests for CyteSeeing. The game itself needs nothing installed.",
+  "scripts": {
+    "quick": "node run.js quick",
+    "full": "node run.js full"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}

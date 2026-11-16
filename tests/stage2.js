@@ -1,0 +1,30 @@
+const open = require('./lib.js');
+(async () => {
+  const [,, indexPath, outDir] = process.argv;
+  const h = await open(indexPath, outDir), { key, wait, shot, ph, at, door, talk, until, settle, p } = h;
+  await key('Space'); await wait(3600); await settle('mika'); await wait(200); await shot('a1_ground');
+  await h.travel('map');
+  await wait(1400); await shot('b0_arrive'); await settle('noor'); await wait(300); await shot('b1_hall');
+  await door(300, 'norm'); await wait(300); await until('norm', 'set', 'norm brief', true); await wait(200); await shot('n_set');
+  await key('ArrowDown'); await key('ArrowRight'); await wait(300); await key('ArrowDown'); await key('Space'); await wait(500); await shot('n_fail'); await talk('norm fail'); await wait(200); await shot('n_fail2'); await key('Space'); await wait(300);
+  await key('ArrowUp', 2); await key('ArrowRight'); await wait(900); await shot('n_both'); await key('ArrowDown', 2); await key('Space'); await wait(500); await talk('norm pass', true); await wait(200); await shot('n_pass'); await key('Space'); await wait(1500);
+  await door(444, 'hvg'); await wait(300); await until('hvg', 'set', 'hvg brief', true); await key('ArrowDown', 3); await key('Space'); await wait(500); await talk('hvg fail raw');
+  await key('Space'); await wait(300); await key('ArrowUp', 3); await key('ArrowRight'); await key('ArrowDown'); await key('ArrowLeft', 3); await key('ArrowDown', 2); await wait(200); await shot('h_ready'); await key('Space'); await wait(500); await talk('hvg 2 stars');
+  await key('ArrowLeft'); await key('Space'); await wait(300); await key('ArrowUp'); await key('ArrowRight'); await key('ArrowDown'); await key('Space'); await wait(500); await talk('hvg pass', true); await shot('h_pass'); await key('Space'); await wait(1500);
+  await door(588, 'pca'); await wait(300); await until('pca', 'spin', 'pca brief', true); await wait(200); await key('Space'); await wait(400); await shot('p_miss'); await talk('pca miss');
+  await key('ArrowRight', 11); await key('Space'); await wait(500); await until('pca', 'set', 'pca bridge', true); await wait(200); await key('Space'); await wait(500); await talk('pca fail', true);
+  await key('Space'); await wait(300); await key('ArrowRight', 5); await key('Space'); await wait(500); await talk('pca pass'); await shot('p_pass'); await key('Space'); await wait(4000); await shot('c_stuck');
+  await at(794); await key('Space'); await wait(500); await settle('knn no data'); await at(726); for (let i = 0; i < 3; i++) { await key('Space'); await wait(500); await settle('pipe'); await wait(200); } await wait(1500);
+  await door(794, 'knn'); await wait(300); await until('knn', 'set', 'knn brief', true); await wait(200); await shot('k_15'); await key('Space'); await wait(500); await talk('knn too many', true);
+  await key('Space'); await wait(300); await key('ArrowLeft', 14); await key('Space'); await wait(500); await talk('knn too few'); await key('Space'); await wait(300);
+  await key('ArrowRight', 5); await wait(300); await shot('k_6'); await key('Space'); await wait(500); await talk('knn pass'); await shot('k_pass'); await key('Space'); await wait(1500);
+  await door(938, 'umap'); await wait(300); await until('umap', 'play', 'umap brief', true); await wait(200); await shot('u_empty'); await key('Space'); await wait(3900); await talk('umap first map', true); await wait(200); await shot('u_one');
+  await key('Space'); await wait(3900); await shot('u_two'); await key('Space'); await wait(400); await shot('u_quiz'); await key('Space'); await wait(400); await talk('umap wrong', true);
+  await key('ArrowDown'); await key('Space'); await wait(500); await talk('umap right', true); await shot('u_pass'); await key('Space'); await wait(1500);
+  await door(1086, 'club'); await wait(400); await until('club', 'ask', 'club intro', true); await wait(300);
+  const fair = [true, false, true, false, false, true, false];
+  for (let i = 0; i < 7; i++) { await wait(700); if (i === 1) await shot('j_claim'); if (!fair[i]) await key('ArrowRight'); await key('Space'); await wait(400); if (i === 1) await shot('j_reply'); await talk('club reply ' + (i + 1)); await wait(200); }
+  console.log('club', await ph('club')); await wait(500); await shot('j_verdict'); await key('Space'); await wait(1600); await settle(); await shot('z_end');
+  console.log(JSON.stringify(await p.evaluate(() => ({ scene: __game.scene(), stars: __game.totalStars() + '/' + __game.maxStars(), rooms: ['norm', 'hvg', 'pca', 'knn', 'umap', 'club'].map(k => k + ':' + __game.state.rooms[k].stars).join(' ') }))));
+  await h.done(outDir + '/said_floor2.txt');
+})();

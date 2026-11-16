@@ -1,0 +1,83 @@
+// Runs the test scripts and says which passed.
+//   node tests/run.js quick          the maths, a new player's first minutes, loading over http, switching projects
+//   node tests/run.js full           the above, then every stage by keyboard and by touch for both projects, memory and fuzz
+//   node tests/run.js stage3 touch4  any tests by name
+// Each script plays the game in a headless browser (Playwright) through the hooks the game offers when the
+// page address ends in ?debug. Screenshots and transcripts go to tests/out/.
+const { spawn } = require('child_process'), http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.resolve(__dirname, '..'), INDEX = path.join(ROOT, 'index.html'), OUT = path.join(__dirname, 'out');
+const PORT = 8765, URL = 'http://127.0.0.1:' + PORT + '/index.html';
+const ALL3 = /"cut:3","lineup:3","name:3","oracle:3","chief:3"/, ALL4 = /rooms \[(\{"done":true,"stars":3\},?){4}\]/;
+
+// name, script, arguments after the page, project, what the output must hold, and a time limit in seconds
+const T = (name, script, o) => Object.assign({ name, script, args: [], want: [], limit: 300 }, o);
+const both = (name, script, o) => ['response', 'cortex'].map(p => T(name + ':' + p, script, Object.assign({ project: p }, o)));
+const QUICK = [
+  T('maths', 'maths.js', { plain: true, want: [/MATHS OK/], limit: 120 }),
+  T('smoke', 'smoke.js', { want: [/scene: corridor floor make/] }),
+  T('http', 'http.js', { url: true, want: [/200 systems\//, /scene pca/], not: [/ 404 /] }),
+  T('projects', 'projects.js', { want: [/back on cortex stars \d+\/\d+ droplets done\? true/] }),
+];
+const FULL = QUICK.concat(
+  both('stage1', 'stage1.js', { want: [/droplets:3 cliff:3 qc:3 soup:3 doublet:3 review:2/] }),
+  both('stage2', 'stage2.js', { want: [/norm:2 hvg:3 pca:3 knn:1 umap:2 club:3/] }),
+  both('stage3', 'stage3.js', { args: ['clean'], want: [ALL3] }),
+  both('stage3-slips', 'stage3.js', { args: ['slips'], want: [/"chief:3"/] }),
+  both('stage4', 'stage4.js', { args: ['clean'], want: [ALL4] }),
+  [T('touch-start', 'touch-start.js', { want: [/pixel scene corridor stage make met true/] }),
+    T('touch1', 'touch1.js', { want: [/18\/63/], limit: 420 }),
+    T('touch2', 'touch2.js', { want: [/norm:3 hvg:3 pca:3/], limit: 420 })],
+  both('touch3', 'touch3.js', { want: [ALL3], limit: 420 }),
+  both('touch4', 'touch4.js', { want: [/pixel rooms \[3,3,3,3\]/], limit: 520 }),
+  [T('soak', 'soak.js', { args: ['8'], noOut: true, check: flat }),
+    T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] })]);
+
+// memory: the number of page elements and listeners must not grow, and the heap must settle
+function flat(out) {
+  const m = /second half of the run \(MB\): (-?[\d.]+) \| nodes (\d+) -> (\d+) \| listeners (\d+) -> (\d+)/.exec(out);
+  if (!m) return 'no summary line';
+  if (m[2] !== m[3] || m[4] !== m[5]) return 'elements or listeners grew';
+  return Number(m[1]) < 1 ? null : 'heap grew by ' + m[1] + ' MB';
+}
+function serve() {
+  const types = { '.html': 'text/html', '.js': 'text/javascript' };
+  return http.createServer((req, res) => {
+    const file = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    if (file.indexOf(ROOT) !== 0 || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }); fs.createReadStream(file).pipe(res);
+  }).listen(PORT, '127.0.0.1');
+}
+function run(t) {
+  return new Promise(done => {
+    const out = path.join(OUT, t.name.replace(/:/g, '-')); fs.mkdirSync(out, { recursive: true });
+    const args = t.plain ? [] : [t.url ? URL : INDEX].concat(t.noOut ? [] : [out], t.args);
+    const env = Object.assign({}, process.env, t.project ? { SCEN: t.project === 'both' ? '1' : t.project } : {});
+    const p = spawn(process.execPath, [path.join(__dirname, t.script)].concat(args), { env });
+    let text = ''; p.stdout.on('data', d => { text += d; }); p.stderr.on('data', d => { text += d; });
+    const timer = setTimeout(() => { text += '\nTIMED OUT'; p.kill(); }, t.limit * 1000);
+    p.on('close', () => {
+      clearTimeout(timer); fs.writeFileSync(path.join(out, 'output.txt'), text);
+      let why = /TIMED OUT/.test(text) ? 'timed out' : !t.plain && !/ERRORS \[\]/.test(text) ? 'page errors, or it did not finish' : null;
+      t.want.forEach(r => { if (!why && !r.test(text)) why = 'missing ' + r; });
+      (t.not || []).forEach(r => { if (!why && r.test(text)) why = 'found ' + r; });
+      if (!why && t.check) why = t.check(text);
+      done(why);
+    });
+  });
+}
+(async () => {
+  const asked = process.argv.slice(2), names = asked.length ? asked : ['quick'];
+  const list = names[0] === 'full' ? FULL : names[0] === 'quick' ? QUICK : FULL.filter(t => names.indexOf(t.name) >= 0 || names.indexOf(t.name.split(':')[0]) >= 0);
+  if (!list.length) { console.log('No such test. Names: ' + FULL.map(t => t.name).join(', ')); process.exit(2); }
+  const server = serve(); let failed = 0;
+  for (const t of list) {
+    const t0 = Date.now(); let why = await run(t);
+    // the playthroughs wait fixed times, so a busy machine can make one stumble: a failure gets one more go
+    if (why) why = await run(t);
+    console.log((why ? 'FAIL  ' : 'pass  ') + t.name + '  (' + Math.round((Date.now() - t0) / 1000) + ' s)' + (why ? '  ' + why : ''));
+    if (why) failed++;
+  }
+  server.close();
+  console.log(failed ? failed + ' of ' + list.length + ' failed. See tests/out/<name>/output.txt.' : 'All ' + list.length + ' passed.');
+  process.exit(failed ? 1 : 0);
+})();
