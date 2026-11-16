@@ -80,7 +80,7 @@ function showBook() {
           'obj &lt;- <span class="k">RunUMAP</span>(obj,\n    reduction = <span class="s">"harmony"</span>, dims = 1:30)</pre>' },
         { id: 'ca', label: 'Python · CyteArc', html:
           '<pre class="code"><span class="c"># the same recipe, Harmony after the PCA</span>\n' +
-          'harmony = ds.pipeline.<span class="k">rna</span>(\n    label=<span class="s">"harmony"</span>,\n    hvg={<span class="s">"batch"</span>: <span class="s">"batch"</span>},\n    harmony={\n        <span class="s">"batch_columns"</span>: [<span class="s">"batch"</span>],\n        <span class="s">"harmony_params"</span>: {<span class="s">"theta"</span>: ' + th + '},\n    },\n)\n\n' +
+          '<span class="c"># CyteArc 1.3 and older: pipeline.run</span>\nharmony = ds.pipeline.<span class="k">rna</span>(\n    label=<span class="s">"harmony"</span>,\n    hvg={<span class="s">"batch"</span>: <span class="s">"batch"</span>},\n    harmony={\n        <span class="s">"batch_columns"</span>: [<span class="s">"batch"</span>],\n        <span class="s">"harmony_params"</span>: {<span class="s">"theta"</span>: ' + th + '},\n    },\n)\n\n' +
           '<span class="c"># how well the runs mix, and how well the\n# cell types stay apart</span>\n' +
           'ds.integration.<span class="k">compute_ilisi</span>(\n    <span class="s">"batch"</span>, harmony[<span class="s">"neighbors"</span>])\n' +
           'ds.integration.<span class="k">compute_clisi</span>(\n    <span class="s">"cell_type"</span>, harmony[<span class="s">"neighbors"</span>])</pre>' },

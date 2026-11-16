@@ -61,7 +61,7 @@ function showBook() {
         { id: 'ca', label: 'Python · CyteArc', html:
           '<pre class="code"><span class="k">from</span> cytearc.plotting <span class="k">import</span> CellField\n\n' +
           '<span class="c"># the whole recipe with no correction, and\n# variable genes ranked inside each run</span>\n' +
-          'uncorrected = ds.pipeline.<span class="k">rna</span>(\n    label=<span class="s">"uncorrected"</span>,\n    hvg={<span class="s">"batch"</span>: <span class="s">"batch"</span>},\n)\n\n' +
+          '<span class="c"># CyteArc 1.3 and older: pipeline.run</span>\nuncorrected = ds.pipeline.<span class="k">rna</span>(\n    label=<span class="s">"uncorrected"</span>,\n    hvg={<span class="s">"batch"</span>: <span class="s">"batch"</span>},\n)\n\n' +
           '<span class="c"># look first: do the runs sit apart?</span>\n' +
           'ds.plots.<span class="k">embedding</span>(\n    run=uncorrected,\n    color_by=CellField(<span class="s">"batch"</span>),\n)</pre>' },
       ],

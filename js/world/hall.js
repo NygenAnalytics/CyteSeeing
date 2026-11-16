@@ -107,6 +107,7 @@ function summon(ids) {
   if (ids.indexOf('pca') >= 0 || ids.indexOf('knn') >= 0) s.unclog = true;
   if (ids.indexOf('cut') >= 0 && !s.bureau) s.bureau = { res: 0.5, fix: 'zoom' };
   if (ids.indexOf('wash') >= 0 && !s.laundry) s.laundry = { theta: 2 };
+  if (ids.indexOf('stairs') >= 0 && !(s.weigh && s.weigh.rule)) s.weigh = Object.assign({}, s.weigh, { rule: 'bh', rate: 0.05 });
   G.save(); if (G.scene() === 'corridor') showBook(); G.sfx('star');
 }
 /* out of the hall, to the map */

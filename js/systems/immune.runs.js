@@ -54,7 +54,7 @@ G.systems.immune.runs = {
   unseen: { word: 'plasma cells', called: 3,
     found: 'Plasma cells. The reference holds none, so each took the label of its nearest relative, and every neighbour agreed.' },
   /* what the next stage of the project does, as Bea puts it when this one is finished */
-  next: 'compares patients with controls',
+  next: 'weighs what changed in the patients',
   /* the counter: the two conditions that Vera's study plans compare */
   counter: {
     /* the letter on a cap, the word in the key, and the tag under a tube */
@@ -66,7 +66,7 @@ G.systems.immune.runs = {
     /* her second plan: why no sample can change its day */
     days: 'VERA: Next study. The clinic only draws patients on Mondays. The controls are students, and they only turn up on Thursdays.',
     /* where this project compares its conditions by a test */
-    test: 'floor 5',
+    test: 'stage 5, the Weigh House',
   },
 };
 })();

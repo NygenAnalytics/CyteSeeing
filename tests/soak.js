@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
     const G = window.__game;
     if (G.setScenario && sc) G.setScenario(sc);
     const s = G.state; Object.keys(s.rooms).forEach(k => { s.rooms[k] = { done: true, stars: 3 }; });
-    s.met = s.met2 = s.met3 = s.met4 = true; s.unclog = true; Object.keys(s.tries).forEach(k => { s.tries[k] = 1; });
+    s.met = s.met2 = s.met3 = s.met4 = s.met5 = true; s.unclog = true; Object.keys(s.tries).forEach(k => { s.tries[k] = 1; });
     return Object.keys(s.rooms);
   }, scenario || null);
   const scenes = (process.env.SCENES ? process.env.SCENES.split(',') : setup).filter(Boolean);
@@ -36,7 +36,7 @@ const { chromium } = require('playwright');
   const series = [];
   for (let r = 1; r <= rounds; r++) {
     const id = r % 2 ? 'cortex' : 'response';
-    await p.evaluate(i => window.__game.load(['systems/' + window.__game.SCENARIOS[i].system + '.js']).then(() => { const G = window.__game; G.setScenario(i); const s = G.state; Object.keys(s.rooms).forEach(k => { s.rooms[k] = { done: true, stars: 3 }; }); s.met = s.met2 = s.met3 = s.met4 = true; s.unclog = true; }), id);
+    await p.evaluate(i => window.__game.load(['systems/' + window.__game.SCENARIOS[i].system + '.js']).then(() => { const G = window.__game; G.setScenario(i); const s = G.state; Object.keys(s.rooms).forEach(k => { s.rooms[k] = { done: true, stars: 3 }; }); s.met = s.met2 = s.met3 = s.met4 = s.met5 = true; s.unclog = true; }), id);
     await p.evaluate(() => window.__game.go('corridor', { floor: 'bay' })); await p.waitForTimeout(500);
     await p.evaluate(() => window.__game.go('campus', { from: 'bay' })); await p.waitForTimeout(500);
     const playable = await p.evaluate(() => { const G = window.__game, out = []; G.route().forEach(st => { G.STAGES[st].rooms.concat(G.STAGES[st].extra || []).forEach(k => out.push(k)); }); return out; });

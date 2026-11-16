@@ -9,7 +9,9 @@ G.systems.immune = {
   id: 'immune',
   /* words the notebook uses when it writes up stages 3 and 4, wherever the player is standing */
   book: { ref: 'a blood reference', refMethods: 'a sorted-blood reference', doublet: 'T-cell and monocyte genes',
-    loner: 'platelets', unseen: 'plasma cells', called: 'B cells' }, name: 'IMMUNE CELLS', tissue: 'blood',
+    loner: 'platelets', unseen: 'plasma cells', called: 'B cells',
+    /* stage 5: the cell type that grows, and the five cell types of a sample in the order of the changes pack */
+    grew: 'CD8 T cells', types: ['CD4 T cells', 'CD8 T cells', 'NK cells', 'B cells', 'monocytes'] }, name: 'IMMUNE CELLS', tissue: 'blood',
 
   /* ---- making the data ---- */
   /* the soup kitchen: four cell types, one gene each (the second is real but quiet in the first

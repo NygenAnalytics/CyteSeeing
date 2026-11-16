@@ -72,7 +72,8 @@ const LINES = {
     ['BEA: A new bag came in this morning. Lost and found, along the wall.'],
     ['BEA: Vera is at the counter with three study plans, and a bell. The bell has already been rung.'],
     /* what comes next depends on the project: the pack of its cell system says */
-    [() => 'BEA: The next stage ' + G.sys.runs.next + '. The builders have not agreed on a design yet.'],
+    /* where the project's next stage is built, Bea sends the player on; where it is not, she says so */
+    [() => 'BEA: The next stage ' + G.sys.runs.next + '. ' + (G.route().indexOf('runs') < G.route().length - 1 ? 'It is up the road, and it is open.' : 'The builders have not agreed on a design yet.')],
   ],
 };
 

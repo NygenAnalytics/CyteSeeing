@@ -100,6 +100,12 @@ book.log = function () {
   if (s.rooms.wash.done && la.theta && w.loner) rows.push('Corrected the run with Harmony at theta <b>' + la.theta + '</b>, and checked that the ' + w.loner + ' kept their island.');
   if (s.rooms.lost.done && !s.rooms.lost.by && w.unseen) rows.push('Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.');
   if (s.rooms.counter.done && !s.rooms.counter.by) rows.push('Fixed three study designs before anything was sequenced.');
+  const we = s.weigh || {};
+  if (s.rooms.scales.done && we.stamps) rows.push('Weighed three claims about responders on donors instead of cells. <b>' + we.stamps.filter(h => h).length + '</b> held.');
+  if (s.rooms.formula.done && we.formula) rows.push('Compared every patient with their own baseline, and found what changed in responders only: <b>~ ' + we.formula + '</b>.');
+  if (s.rooms.stairs.done && we.found) rows.push('Called <b>' + we.found + '</b> of 200 genes ' + (we.rule === 'bh' ? 'at a false discovery rate of' : 'with a threshold of') + ' <b>' + Math.round(we.rate * 100) + '%</b>.');
+  if (s.rooms.census.done && we.ref !== undefined && w.types) rows.push('Entered in the ledger that <b>' + w.grew + '</b> grew in number in responders, against ' + w.types[we.ref] + '.');
+  if (s.rooms.readout.done && we.sentence) rows.push('Sent the clinic one sentence: <b>' + we.sentence + '</b>');
   const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
   if (lent) rows.push('Tomo ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
@@ -133,6 +139,13 @@ book.methods = function () {
   const la = s.laundry || {};
   if (s.rooms.wash.done && la.theta) m.push('Two sequencing runs were analysed together. Variable genes were selected within each run, and the principal components were corrected for run with Harmony (theta = ' + la.theta + '); counts were left unchanged. The correction was checked by run mixing among nearest neighbours and by the marker genes of a population present in one run only.');
   if (s.rooms.lost.done) m.push('A third run was mapped onto the corrected reference and labels were transferred from the 5 nearest reference cells. Transferred labels were checked against marker genes; one group of cells lacked the marker of its label and was annotated separately as ' + w.unseen + '.');
+  const we = s.weigh || {};
+  if (s.rooms.scales.done) m.push('To compare conditions, counts were summed per donor, visit and cell type (pseudobulk), and donors, not cells, were treated as replicates.');
+  if (s.rooms.formula.done) m.push('Effects of treatment were tested within patients (~ donor + visit), and effects specific to responders as the interaction of visit and response.');
+  if (s.rooms.stairs.done && we.rule) m.push(we.rule === 'bh' ? 'P-values were adjusted for the number of genes tested by the Benjamini-Hochberg procedure, and genes were called at a false discovery rate of ' + Math.round(we.rate * 100) + '%.'
+    : we.rule === 'bonf' ? 'P-values were adjusted for the number of genes tested by the Bonferroni method (threshold ' + we.rate + ').' : 'Genes were called at an unadjusted p-value of ' + we.rate + '.');
+  if (s.rooms.census.done && we.ref !== undefined && w.types) m.push('Changes in cell-type composition were assessed with all cell types considered together, and are reported relative to ' + w.types[we.ref] + ' as the reference.');
+  if (s.rooms.readout.done) m.push('The findings are associations in twelve patients. Whether they predict response was not tested in new patients.');
   return m.join(' ');
 };
 

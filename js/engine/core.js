@@ -52,17 +52,19 @@ function fresh() {
       cut: { done: false, stars: 0 }, lineup: { done: false, stars: 0 }, name: { done: false, stars: 0 },
       oracle: { done: false, stars: 0 }, chief: { done: false, stars: 0 },
       sort: { done: false, stars: 0 }, wash: { done: false, stars: 0 }, lost: { done: false, stars: 0 }, counter: { done: false, stars: 0 },
+      scales: { done: false, stars: 0 }, formula: { done: false, stars: 0 }, stairs: { done: false, stars: 0 }, census: { done: false, stars: 0 }, readout: { done: false, stars: 0 },
     },
     floor: 'make',   // which stage the player is in
     cloud: null,     // the choices made on floor 2: { depth, log, method, n, block, dims, k, seed, pack }
     bureau: null,    // the case on floor 3: { res, fix, pins, names, ref }
     laundry: null,   // the wash on floor 4: { theta }
+    weigh: null,     // what was weighed in stage 5: { stamps, formula, rule, rate, ref, sentence }
     load: null,      // what you loaded in 1-1: { R, lanes, singlets, doublets, rate }
     calls: null,     // what you called in 1-2: { called, recall, empties, doublets }
     qc: null,        // what you filtered in 1-3
     soup: null,      // what you corrected in 1-4
     dbl: null,       // what you removed in 1-5
-    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0, cut: 0, lineup: 0, name: 0, oracle: 0, chief: 0, sort: 0, wash: 0, lost: 0, counter: 0 },
+    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0, cut: 0, lineup: 0, name: 0, oracle: 0, chief: 0, sort: 0, wash: 0, lost: 0, counter: 0, scales: 0, formula: 0, stairs: 0, census: 0, readout: 0 },
     notes: {},       // field notes unlocked so far
     eggs: {}, met: false, sound: false,
   };
@@ -111,7 +113,7 @@ G.setScenario = function (id) {
   if (G.profile.scenario) G.save();
   G.profile.scenario = id;
   G.state = readSlot(id);
-  ['cloud', 'atlas', 'loads'].forEach(k => { if (G[k] && G[k].reset) G[k].reset(); });
+  ['cloud', 'atlas', 'loads', 'trial'].forEach(k => { if (G[k] && G[k].reset) G[k].reset(); });
   G.sys = id && G.SCENARIOS[id] && G.systems ? G.systems[G.SCENARIOS[id].system] || null : null;
   G.save();
 };
@@ -480,6 +482,7 @@ G.LOOKS = {
   CHIEF: { skin: C.skin1, hair: '#9aa0ad', style: 'short', coat: '#3a3f4f', shirt: C.paper, tash: '#9aa0ad' },
   BEA: { skin: C.skin3, hair: '#d9d3c4', style: 'bun', coat: '#3f8fb5', shirt: C.paper, glasses: true },
   VERA: { skin: C.skin2, hair: '#3a2f3a', style: 'long', coat: '#7a2f45', shirt: '#e8d9a8' },
+  AMARA: { skin: '#7a4a30', hair: '#16121c', style: 'curly', coat: '#2f5d4a', shirt: '#d8b45a' },
 };
 G.mentor = () => (G.scene() === 'campus' || G.scene() === 'bay' ? 'VERA' : (G.STAGES[G.state.floor] || {}).mentor || 'MIKA');
 /* a 16 by 16 portrait */
@@ -491,6 +494,7 @@ G.face = function (x, y, k, talking) {
   const side = k.style === 'long' ? 12 : 4;
   R(x + 2, y + 1, 12, 4, k.hair); R(x + 2, y + 3, 2, side, k.hair); R(x + 12, y + 3, 2, side, k.hair);
   if (k.style === 'bun') R(x + 6, y, 4, 2, k.hair);
+  if (k.style === 'curly') { R(x + 1, y + 2, 2, 6, k.hair); R(x + 13, y + 2, 2, 6, k.hair); R(x + 4, y, 8, 1, k.hair); }
   if (k.hat) { R(x + 1, y + 3, 14, 2, k.hat); R(x + 4, y, 8, 3, k.hat); R(x + 4, y + 2, 8, 1, C.ink); }
   if (k.tash) R(x + 5, y + 10, 6, 1, k.tash);
   R(x + 5, y + 7, 2, 2, C.ink); R(x + 9, y + 7, 2, 2, C.ink);

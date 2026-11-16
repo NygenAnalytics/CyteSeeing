@@ -181,7 +181,9 @@ function place(n, i) {
   R(x - 3, y - 8, 7, 8, '#0c1329'); R(x - 2, y - 7, 5, 7, i === at ? '#f6dc8c' : '#30406d');
   R(x - 16, y - 34, 11, 10, C.ink); T(String(n.n), x - 13, y - 34, n.col, { f: 'smb' });
   if (fin) { R(x + 10, y - 36, 1, 12, C.paper); R(x + 11, y - 36, 6, 4, C.mint); }
-  const s = stars(n); if (s) { G.star(x + 19, y - 12, true); T(String(s), x + 28, y - 13, C.amber); }
+  /* its stars, beside it; over the roof where the next building stands close on that side */
+  const s = stars(n), tight = nodes.some(m => m !== n && m.x > x && m.x - x < 58 && m.y > y - 13 && m.y < y + 31), sy = tight ? y - 31 : y - 12;
+  if (s) { G.star(x + 21, sy, true); T(String(s), x + 30, sy - 1, C.amber); }
 }
 /* what the place the player stands at is, and what can be done there */
 function prompt(n) {

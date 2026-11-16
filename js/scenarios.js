@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 const C = G.C;
-G.VERSION = '6';
+G.VERSION = '7';
 G.STAGES = {
   /* not a stage of any project: the hall where a project is chosen */
   bay: { n: 0, name: 'ARRIVALS', mentor: 'VERA', rooms: [], makes: [], hall: [], scenes: {} },
@@ -29,6 +29,11 @@ G.STAGES = {
     rooms: ['sort', 'wash', 'lost', 'counter'], makes: ['sort', 'wash', 'lost'],
     hall: ['data/maths.js', 'data/loads.js', 'stages/runs/laundry.js'],
     scenes: { sort: 'stages/runs/sorting.js', wash: 'stages/runs/wash.js', lost: 'stages/runs/lost.js', counter: 'stages/runs/counter.js' } },
+  /* the first stage where the projects part ways: comparing conditions is only for a project that has conditions */
+  changes: { n: 5, name: 'THE WEIGH HOUSE', what: 'CONDITIONS, DONORS', mentor: 'AMARA', col: C.orange, systems: ['immune'], pack: 'changes',
+    rooms: ['scales', 'formula', 'stairs', 'census', 'readout'], makes: ['scales', 'formula', 'stairs', 'census'],
+    hall: ['data/trial.js', 'stages/changes/hall.js'],
+    scenes: { scales: 'stages/changes/scales.js', formula: 'stages/changes/formula.js', stairs: 'stages/changes/stairs.js', census: 'stages/changes/census.js', readout: 'stages/changes/readout.js' } },
 };
 /* `route` lists every stage the project will have. A stage that is not built yet, or not yet
    written for the project's cells, shows on the map as still to come. */
@@ -36,7 +41,7 @@ G.SCENARIOS = {
   response: { system: 'immune', col: C.coral, parcel: 'BLOOD', from: 'THE CLINIC',
     title: 'WHY DO SOME PATIENTS RESPOND?', sample: 'BLOOD, BEFORE AND AFTER TREATMENT',
     label: 'Blood from the clinic, taken before and after a treatment. The question: why do some patients respond?',
-    route: ['make', 'map', 'who', 'runs'], coming: ['WHAT CHANGES', 'WHO SIGNALS', 'THE REVIEW'],
+    route: ['make', 'map', 'who', 'runs', 'changes'], coming: ['WHO SIGNALS', 'THE REVIEW'],
     brief: ['VERA: Twelve patients started the same treatment. Six got better. Nobody can say why.',
       'VERA: That box holds their blood, taken before and after. Find what differs between them.'] },
   cortex: { system: 'brain', col: C.mint, parcel: 'BRAIN', from: 'THE TISSUE BANK',

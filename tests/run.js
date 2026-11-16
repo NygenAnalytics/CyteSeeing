@@ -1,13 +1,13 @@
 // Runs the test scripts and says which passed.
-//   node tests/run.js quick          the maths, a new player's first minutes, loading over http, switching projects
+//   node tests/run.js quick          the maths, a new player's first minutes, loading over http, switching projects, an old save
 //   node tests/run.js full           the above, then every stage by keyboard and by touch for both projects, memory and fuzz
 //   node tests/run.js stage3 touch4  any tests by name
 // Each script plays the game in a headless browser (Playwright) through the hooks the game offers when the
 // page address ends in ?debug. Screenshots and transcripts go to tests/out/.
 const { spawn } = require('child_process'), http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..'), INDEX = path.join(ROOT, 'index.html'), OUT = path.join(__dirname, 'out');
-const PORT = 8765, URL = 'http://127.0.0.1:' + PORT + '/index.html';
-const ALL3 = /"cut:3","lineup:3","name:3","oracle:3","chief:3"/, ALL4 = /rooms \[(\{"done":true,"stars":3\},?){4}\]/;
+const PORT = Number(process.env.PORT) || 8765, URL ='http://127.0.0.1:' + PORT + '/index.html';
+const ALL3 = /"cut:3","lineup:3","name:3","oracle:3","chief:3"/, ALL4 = /rooms \[(\{"done":true,"stars":3\},?){4}\]/, ALL5 = /rooms \[(\{"done":true,"stars":3\},?){5}\]/;
 
 // name, script, arguments after the page, project, what the output must hold, and a time limit in seconds
 const T = (name, script, o) => Object.assign({ name, script, args: [], want: [], limit: 300 }, o);
@@ -17,6 +17,7 @@ const QUICK = [
   T('smoke', 'smoke.js', { want: [/scene: corridor floor make/] }),
   T('http', 'http.js', { url: true, want: [/200 systems\//, /scene pca/], not: [/ 404 /] }),
   T('projects', 'projects.js', { want: [/back on cortex stars \d+\/\d+ droplets done\? true/] }),
+  T('oldsave', 'oldsave.js', { want: [/loaded \{"rooms":26,.*"stars":"42\/78"/, /station scales play heaps 12/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
 ];
 const FULL = QUICK.concat(
   both('stage1', 'stage1.js', { want: [/droplets:3 cliff:3 qc:3 soup:3 doublet:3 review:2/] }),
@@ -25,10 +26,14 @@ const FULL = QUICK.concat(
   both('stage3-slips', 'stage3.js', { args: ['slips'], want: [/"chief:3"/] }),
   both('stage4', 'stage4.js', { args: ['clean'], want: [ALL4] }),
   [T('touch-start', 'touch-start.js', { want: [/pixel scene corridor stage make met true/] }),
-    T('touch1', 'touch1.js', { want: [/18\/63/], limit: 420 }),
+    T('touch1', 'touch1.js', { want: [/18\/78/], limit: 420 }),
     T('touch2', 'touch2.js', { want: [/norm:3 hvg:3 pca:3/], limit: 420 })],
   both('touch3', 'touch3.js', { want: [ALL3], limit: 420 }),
   both('touch4', 'touch4.js', { want: [/pixel rooms \[3,3,3,3\]/], limit: 520 }),
+  /* stage 5 is the first that only one project has */
+  [T('stage5:response', 'stage5.js', { project: 'response', args: ['clean'], want: [ALL5] }),
+    T('stage5-slips:response', 'stage5.js', { project: 'response', args: ['slips'], want: [/rooms \[(\{"done":true,"stars":1\},?){5}\]/], limit: 420 }),
+    T('touch5:response', 'touch5.js', { project: 'response', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 })],
   [T('soak', 'soak.js', { args: ['8'], noOut: true, check: flat }),
     T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] })]);
 
