@@ -89,15 +89,16 @@ book.log = function () {
   if (s.rooms.pca.done && cl.dims) rows.push('Kept <b>' + cl.dims + '</b> principal components.');
   if (s.rooms.knn.done && cl.k) rows.push('Linked every cell to its <b>' + cl.k + '</b> nearest neighbours.');
   if (s.rooms.umap.done && cl.seed) rows.push('Drew the map with seed <b>' + cl.seed + '</b>. A map, not a result.');
+  /* w: the cell system's words. On the title screen the cell system has not arrived yet, and the lines that need its words wait for it. */
   const bu = s.bureau || {}, w = (G.sys && G.sys.book) || {};
   if (s.rooms.cut.done && bu.res) rows.push('Clustered at resolution <b>' + bu.res + '</b>, then ' + (bu.fix === 'merge' ? 'merged two clusters that no gene told apart' : 'zoomed into one cluster to split it') + ': <b>8</b> clusters.');
   if (s.rooms.lineup.done && bu.pins) rows.push('Pinned a marker gene on <b>' + bu.pins.filter(g => g).length + '</b> clusters, and took a cluster of <b>doublets</b> off the board.');
   if (s.rooms.name.done && bu.names) rows.push('Named the clusters from their markers.');
-  if (s.rooms.oracle.done && bu.ref) rows.push('Took a second opinion from ' + w.ref + ': took one of its names, kept one of yours.');
+  if (s.rooms.oracle.done && bu.ref && w.ref) rows.push('Took a second opinion from ' + w.ref + ': took one of its names, kept one of yours.');
   const la = s.laundry || {};
-  if (s.rooms.sort.done && !s.rooms.sort.by) rows.push('Paired <b>5</b> cell types across two runs. ' + w.loner.charAt(0).toUpperCase() + w.loner.slice(1) + ' were in one run only.');
-  if (s.rooms.wash.done && la.theta) rows.push('Corrected the run with Harmony at theta <b>' + la.theta + '</b>, and checked that the ' + w.loner + ' kept their island.');
-  if (s.rooms.lost.done && !s.rooms.lost.by) rows.push('Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.');
+  if (s.rooms.sort.done && !s.rooms.sort.by && w.loner) rows.push('Paired <b>5</b> cell types across two runs. ' + w.loner.charAt(0).toUpperCase() + w.loner.slice(1) + ' were in one run only.');
+  if (s.rooms.wash.done && la.theta && w.loner) rows.push('Corrected the run with Harmony at theta <b>' + la.theta + '</b>, and checked that the ' + w.loner + ' kept their island.');
+  if (s.rooms.lost.done && !s.rooms.lost.by && w.unseen) rows.push('Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.');
   if (s.rooms.counter.done && !s.rooms.counter.by) rows.push('Fixed three study designs before anything was sequenced.');
   const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
   if (lent) rows.push('Tomo ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
