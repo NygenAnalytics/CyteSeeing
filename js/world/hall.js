@@ -21,7 +21,9 @@ const HERO = { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, sh
                      is { id, kind, x, label }, and a step (a door or a station) has { code, name,
                      col, need } as well. A thing may also have fig (the figure it opens), stick
                      (its lines stop at the last one), floor (it is down on the floor, not at the
-                     wall), sfx (the sound it makes) and ay (how high the arrow sits over it)
+                     wall), sfx (the sound it makes), ay (how high the arrow sits over it) and py
+                     (how high its prompt floats, where the usual place over the player's head
+                     would cover somebody)
      LINES           what the things say when poked, and what the mentor says after each step
      paint           the colours of the walls and the floor
      draw(it, x, o)  draws one thing; false for the things this file draws (a door, the way out)
@@ -29,6 +31,8 @@ const HERO = { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, sh
      line(id, n)     what a thing says on its nth poke, when that is not the next of its lines
      GOALS, NOTES    the stage's page in the notebook; or book(found, total), to write the page itself
    and, only where its hall needs one:
+     open()          the hall is about to open: a kit whose things depend on the project, or on what
+                     the player has done, makes its ITEMS and W here
      use(it, api)    the player uses a thing in a way of the hall's own; true if that dealt with it
      next()          the id of the thing the arrow points at, when that is not the next step
      entry           where the player comes in from the map, when that is not the way out
@@ -39,15 +43,21 @@ const HERO = { skin: C.skin1, hair: '#3a2a22', style: 'short', coat: C.paper, sh
      over(cx, o)     draws over the furniture, behind the player
      fore(cx, o)     draws in front of the player
      locked(it)      true for a step that is shut for a reason of the hall's own
-     label(it)       the prompt over a thing, when that is not the thing's own label
+     label(it)       the prompt over a thing, when that is not the thing's own label. A thing
+                     with neither has no prompt
      mark(it)        the colour on the strip map of a thing that is not a step
-     dark(n)         true while ceiling lamp n is off */
+     dark(n)         true while ceiling lamp n is off
+   draw, over and fore are handed what the hall knows, as o: locked(it), since(id) (seconds since a
+   thing was poked), pokes (how often each was) and near() (the thing the player stands at, or null).
+   A thing may move: the hall reads its x every frame, so one that walks with the player only has
+   to change it in tick. */
 G.kits = G.kits || {};
 let ITEMS = [], EGGS = [], ROOMS = [], kit = null, floorId = 'make';
 function setFloor(id) {
   id = { g: 'make', 2: 'map', 3: 'who', 4: 'runs' }[id] || id;      /* what the stages were called when they were floors */
   floorId = G.STAGES[id] && G.kits[id] ? id : 'make';
   kit = G.kits[floorId];
+  if (kit.open) kit.open();
   ITEMS = kit.ITEMS; W = kit.W; ROOMS = G.STAGES[floorId].rooms;
   if (kit.LINES) Object.assign(LINES, kit.LINES);
   EGGS = ITEMS.filter(i => i.kind === 'prop').map(i => i.id);
@@ -125,7 +135,7 @@ const API = {
   refresh: () => showBook(),
 };
 /* and what it may ask while it draws */
-const LOOK = { locked: isLocked, since, pokes };
+const LOOK = { locked: isLocked, since, pokes, near: () => near };
 function interact(it) {
   const s = G.state;
   if (kit.use && kit.use(it, API)) return;
@@ -184,7 +194,9 @@ G.scenes.corridor = {
   update(dt) {
     hero.walking = false;
     if (liftHint && G.t > liftHint && !talk && !fig) {
-      G.toast('THE NEXT STAGE IS OPEN. ' + G.kt('PRESS L FOR THE MAP.', 'TAP MAP TO GO THERE.'), 6); G.sfx('ok');
+      /* what lies ahead on the road is the next stage, or, at the end of it, the project's review */
+      const on = G.STAGES[nextStage()];
+      G.toast((on.end ? on.what : 'THE NEXT STAGE') + ' IS OPEN. ' + G.kt('PRESS L FOR THE MAP.', 'TAP MAP TO GO THERE.'), 6); G.sfx('ok');
       G.state.told = Object.assign({}, G.state.told); G.state.told[floorId] = true;
       G.save(); liftHint = 0;
     }
@@ -271,9 +283,12 @@ G.scenes.corridor = {
       const lab = near.kind === 'door' ? (isLocked(near) ? 'LOCKED' : 'ENTER ' + near.code)
         : near.kind === 'station' ? (isLocked(near) ? 'NO DATA' : near.label || 'USE ' + near.code)
         : (kit.label && kit.label(near)) || near.label;
-      const w = Math.ceil(G.tw(lab, 'sm')) + 10, x = G.clamp(Math.round(hero.x - cx - w / 2), 2, VW - w - 2), y = FY - 36 + Math.round(Math.sin(G.t * 4));
-      G.panel(x, y, w, 12, { border: C.amber, fill: C.ink });
-      T(lab, x + 5, y + 1, C.amber);
+      /* a thing with nothing to offer has no prompt, and one that stands where the prompt would cover it says how high the prompt floats (py) */
+      if (lab) {
+        const w = Math.ceil(G.tw(lab, 'sm')) + 10, x = G.clamp(Math.round(hero.x - cx - w / 2), 2, VW - w - 2), y = (near.py || FY - 36) + Math.round(Math.sin(G.t * 4));
+        G.panel(x, y, w, 12, { border: C.amber, fill: C.ink });
+        T(lab, x + 5, y + 1, C.amber);
+      }
     }
     if (talk) talk.draw({ top: true });
     if (ask) {

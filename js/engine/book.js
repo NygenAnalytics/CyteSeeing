@@ -72,46 +72,53 @@ book.goal = function (id, state) {
   li.classList.toggle('done', state === true);
   li.classList.toggle('fail', state === false);
 };
+/* What the player did in each room, one line for each, in the order the log lists them. A line
+   is '' until there is something to say. s is the save, and w the cell system's words: on the
+   title screen the cell system has not arrived yet, and a line that needs its words waits for it. */
+const LOG = {
+  droplets: s => (s.load ? 'Loaded <b>' + s.load.lanes + (s.load.lanes > 1 ? ' lanes' : ' lane') + ' × ' + G.fmt(s.load.R) + '</b> cells: <b>' +
+    G.fmt(s.load.singlets) + '</b> singlets and <b>' + G.fmt(s.load.doublets) + '</b> doublets (' + (s.load.rate * 100).toFixed(1) + '%).' : ''),
+  cliff: s => (s.calls ? 'Called <b>' + G.fmt(s.calls.called) + '</b> cells in lane 1. Kept ' + Math.round(s.calls.recall * 100) + '% of the real cells, with ' +
+    (s.calls.empties * 100).toFixed(1) + '% empty droplets, and <b>' + G.fmt(s.calls.doublets) + '</b> hidden doublets.' : ''),
+  qc: s => (s.qc ? 'Filtered to <b>' + G.fmt(s.qc.kept) + '</b> cells. <b>' + G.fmt(s.qc.junkIn) + '</b> damaged cells got through' +
+    (s.qc.lost ? ', and you lost most of the <b>' + s.qc.lost + '</b>.' : '.') : ''),
+  soup: s => (s.soup ? 'Removed a soup share of <b>' + s.soup.rho + '%</b>. The real share was ' + s.soup.truth + '%.' : ''),
+  doublet: s => (s.dbl ? 'Removed <b>' + G.fmt(s.dbl.removed) + '</b> flagged cells. <b>' + G.fmt(s.dbl.missed) + '</b> doublets are still in the data.' : ''),
+  /* the room that closes a stage makes nothing to carry: its line says how it went. Its stars count what was answered. */
+  review: s => (s.rooms.review.done && s.rooms.review.stars ? 'Answered <b>' + (s.rooms.review.stars + 2) + '</b> of Reviewer 2\'s five questions.' : ''),
+  norm: s => (s.rooms.norm.done && !s.rooms.norm.by ? 'Normalised the counts: divided by depth, then log(1 + x).' : ''),
+  hvg: s => { const cl = s.cloud || {}; return s.rooms.hvg.done && cl.n ? 'Picked <b>' + cl.n + '</b> of 207 genes by ' + (cl.method === 'raw' ? 'plain variance' : 'variance above the trend') +
+    (cl.block ? ', skipping MT- and RP genes.' : '. MT- and RP genes are in the list.') : ''; },
+  pca: s => (s.rooms.pca.done && (s.cloud || {}).dims ? 'Kept <b>' + s.cloud.dims + '</b> principal components.' : ''),
+  knn: s => (s.rooms.knn.done && (s.cloud || {}).k ? 'Linked every cell to its <b>' + s.cloud.k + '</b> nearest neighbours.' : ''),
+  umap: s => (s.rooms.umap.done && (s.cloud || {}).seed ? 'Drew the map with seed <b>' + s.cloud.seed + '</b>. A map, not a result.' : ''),
+  club: s => (s.rooms.club.done && s.rooms.club.stars ? 'Judged <b>' + (s.rooms.club.stars + 4) + '</b> of Tomo\'s seven claims about the map correctly.' : ''),
+  cut: s => { const bu = s.bureau || {}; return s.rooms.cut.done && bu.res ? 'Clustered at resolution <b>' + bu.res + '</b>, then ' + (bu.fix === 'merge' ? 'merged two clusters that no gene told apart' : 'zoomed into one cluster to split it') + ': <b>8</b> clusters.' : ''; },
+  lineup: s => (s.rooms.lineup.done && (s.bureau || {}).pins ? 'Pinned a marker gene on <b>' + s.bureau.pins.filter(g => g).length + '</b> clusters, and took a cluster of <b>doublets</b> off the board.' : ''),
+  name: s => (s.rooms.name.done && (s.bureau || {}).names ? 'Named the clusters from their markers.' : ''),
+  oracle: (s, w) => (s.rooms.oracle.done && (s.bureau || {}).ref && w.ref ? 'Took a second opinion from ' + w.ref + ': took one of its names, kept one of yours.' : ''),
+  chief: s => (s.rooms.chief.done && s.rooms.chief.stars ? 'Settled <b>' + (s.rooms.chief.stars + 2) + '</b> of the Chief\'s five objections.' : ''),
+  sort: (s, w) => (s.rooms.sort.done && !s.rooms.sort.by && w.loner ? 'Paired <b>5</b> cell types across two runs. ' + w.loner.charAt(0).toUpperCase() + w.loner.slice(1) + ' were in one run only.' : ''),
+  wash: (s, w) => (s.rooms.wash.done && (s.laundry || {}).theta && w.loner ? 'Corrected the run with Harmony at theta <b>' + s.laundry.theta + '</b>, and checked that the ' + w.loner + ' kept their island.' : ''),
+  lost: (s, w) => (s.rooms.lost.done && !s.rooms.lost.by && w.unseen ? 'Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.' : ''),
+  counter: s => (s.rooms.counter.done && !s.rooms.counter.by ? 'Fixed three study designs before anything was sequenced.' : ''),
+  scales: s => (s.rooms.scales.done && (s.weigh || {}).stamps ? 'Weighed three claims about responders on donors instead of cells. <b>' + s.weigh.stamps.filter(h => h).length + '</b> held.' : ''),
+  formula: s => (s.rooms.formula.done && (s.weigh || {}).formula ? 'Compared every patient with their own baseline, and found what changed in responders only: <b>~ ' + s.weigh.formula + '</b>.' : ''),
+  stairs: s => { const we = s.weigh || {}; return s.rooms.stairs.done && we.found ? 'Called <b>' + we.found + '</b> of 200 genes ' + (we.rule === 'bh' ? 'at a false discovery rate of' : 'with a threshold of') + ' <b>' + Math.round(we.rate * 100) + '%</b>.' : ''; },
+  census: (s, w) => { const we = s.weigh || {}; return s.rooms.census.done && we.ref !== undefined && w.types ? 'Entered in the ledger that <b>' + w.grew + '</b> grew in number in responders, against ' + w.types[we.ref] + '.' : ''; },
+  readout: s => (s.rooms.readout.done && (s.weigh || {}).sentence ? 'Sent the clinic one sentence: <b>' + s.weigh.sentence + '</b>' : ''),
+  turntable: s => { const ya = s.yard || {}; return s.rooms.turntable.done && ya.root && ya.sent ? 'Sent <b>' + ya.sent + '</b> ' + (ya.sent === 1 ? 'engine' : 'engines') + ' over the band of cells, and set the root of the line among the <b>' + ya.root + '</b>.' : ''; },
+  track: (s, w) => { const ya = s.yard || {}; return s.rooms.track.done && ya.pieces ? 'Laid <b>' + ya.pieces + '</b> pieces of track where the cells link, with <b>' + ya.wagons + '</b> test wagons' + (w.apart ? ', and left the ' + w.apart + ' off the line.' : '.') : ''; },
+  timetable: s => { const ya = s.yard || {}; return s.rooms.timetable.done && ya.genes ? 'Smoothed five genes along pseudotime at a span of <b>' + ya.span + '</b>, and read the order they come on in: <b>' + ya.genes.join(', ') + '</b>.' : ''; },
+  clock: s => { const ya = s.yard || {}; return s.rooms.clock.done && ya.oldest ? 'Checked the direction against real time: the <b>' + ya.oldest.toLowerCase() + '</b> sample has <b>' + ya.far + '%</b> of its cells past half-way, more than either younger one.' : ''; },
+  board: s => (s.rooms.board.done && (s.yard || {}).lines ? 'Hung the departure board for Vera: <b>' + s.yard.lines.length + '</b> lines, with an order on it and no times.' : ''),
+  /* the end of the project: its stars count the slips over the questions from the floor */
+  close: s => (s.rooms.close.done && s.rooms.close.stars ? 'Took the project through its review, ' + ['', 'with <b>more than one slip</b>', 'with <b>one slip</b>', '<b>without a slip</b>'][s.rooms.close.stars] + '.' : ''),
+};
+/* the line of one room: the log is made of these, and the long gallery hangs each under its frame */
+book.line = function (room) { const f = LOG[room], s = G.state; return f && s.rooms[room] ? f(s, (G.sys && G.sys.book) || {}) : ''; };
 book.log = function () {
-  const s = G.state, rows = [];
-  if (s.load) rows.push('Loaded <b>' + s.load.lanes + (s.load.lanes > 1 ? ' lanes' : ' lane') + ' × ' + G.fmt(s.load.R) + '</b> cells: <b>' +
-    G.fmt(s.load.singlets) + '</b> singlets and <b>' + G.fmt(s.load.doublets) + '</b> doublets (' + (s.load.rate * 100).toFixed(1) + '%).');
-  if (s.calls) rows.push('Called <b>' + G.fmt(s.calls.called) + '</b> cells in lane 1. Kept ' + Math.round(s.calls.recall * 100) + '% of the real cells, with ' +
-    (s.calls.empties * 100).toFixed(1) + '% empty droplets, and <b>' + G.fmt(s.calls.doublets) + '</b> hidden doublets.');
-  if (s.qc) rows.push('Filtered to <b>' + G.fmt(s.qc.kept) + '</b> cells. <b>' + G.fmt(s.qc.junkIn) + '</b> damaged cells got through' +
-    (s.qc.lost ? ', and you lost most of the <b>' + s.qc.lost + '</b>.' : '.'));
-  if (s.soup) rows.push('Removed a soup share of <b>' + s.soup.rho + '%</b>. The real share was ' + s.soup.truth + '%.');
-  if (s.dbl) rows.push('Removed <b>' + G.fmt(s.dbl.removed) + '</b> flagged cells. <b>' + G.fmt(s.dbl.missed) + '</b> doublets are still in the data.');
-  const cl = s.cloud || {};
-  if (s.rooms.norm.done && !s.rooms.norm.by) rows.push('Normalised the counts: divided by depth, then log(1 + x).');
-  if (s.rooms.hvg.done && cl.n) rows.push('Picked <b>' + cl.n + '</b> of 207 genes by ' + (cl.method === 'raw' ? 'plain variance' : 'variance above the trend') +
-    (cl.block ? ', skipping MT- and RP genes.' : '. MT- and RP genes are in the list.'));
-  if (s.rooms.pca.done && cl.dims) rows.push('Kept <b>' + cl.dims + '</b> principal components.');
-  if (s.rooms.knn.done && cl.k) rows.push('Linked every cell to its <b>' + cl.k + '</b> nearest neighbours.');
-  if (s.rooms.umap.done && cl.seed) rows.push('Drew the map with seed <b>' + cl.seed + '</b>. A map, not a result.');
-  /* w: the cell system's words. On the title screen the cell system has not arrived yet, and the lines that need its words wait for it. */
-  const bu = s.bureau || {}, w = (G.sys && G.sys.book) || {};
-  if (s.rooms.cut.done && bu.res) rows.push('Clustered at resolution <b>' + bu.res + '</b>, then ' + (bu.fix === 'merge' ? 'merged two clusters that no gene told apart' : 'zoomed into one cluster to split it') + ': <b>8</b> clusters.');
-  if (s.rooms.lineup.done && bu.pins) rows.push('Pinned a marker gene on <b>' + bu.pins.filter(g => g).length + '</b> clusters, and took a cluster of <b>doublets</b> off the board.');
-  if (s.rooms.name.done && bu.names) rows.push('Named the clusters from their markers.');
-  if (s.rooms.oracle.done && bu.ref && w.ref) rows.push('Took a second opinion from ' + w.ref + ': took one of its names, kept one of yours.');
-  const la = s.laundry || {};
-  if (s.rooms.sort.done && !s.rooms.sort.by && w.loner) rows.push('Paired <b>5</b> cell types across two runs. ' + w.loner.charAt(0).toUpperCase() + w.loner.slice(1) + ' were in one run only.');
-  if (s.rooms.wash.done && la.theta && w.loner) rows.push('Corrected the run with Harmony at theta <b>' + la.theta + '</b>, and checked that the ' + w.loner + ' kept their island.');
-  if (s.rooms.lost.done && !s.rooms.lost.by && w.unseen) rows.push('Mapped a third run onto the corrected map, and flagged <b>' + w.unseen + '</b> that had been labelled ' + w.called + '.');
-  if (s.rooms.counter.done && !s.rooms.counter.by) rows.push('Fixed three study designs before anything was sequenced.');
-  const we = s.weigh || {};
-  if (s.rooms.scales.done && we.stamps) rows.push('Weighed three claims about responders on donors instead of cells. <b>' + we.stamps.filter(h => h).length + '</b> held.');
-  if (s.rooms.formula.done && we.formula) rows.push('Compared every patient with their own baseline, and found what changed in responders only: <b>~ ' + we.formula + '</b>.');
-  if (s.rooms.stairs.done && we.found) rows.push('Called <b>' + we.found + '</b> of 200 genes ' + (we.rule === 'bh' ? 'at a false discovery rate of' : 'with a threshold of') + ' <b>' + Math.round(we.rate * 100) + '%</b>.');
-  if (s.rooms.census.done && we.ref !== undefined && w.types) rows.push('Entered in the ledger that <b>' + w.grew + '</b> grew in number in responders, against ' + w.types[we.ref] + '.');
-  if (s.rooms.readout.done && we.sentence) rows.push('Sent the clinic one sentence: <b>' + we.sentence + '</b>');
-  const ya = s.yard || {};
-  if (s.rooms.turntable.done && ya.root && ya.sent) rows.push('Sent <b>' + ya.sent + '</b> ' + (ya.sent === 1 ? 'engine' : 'engines') + ' over the band of cells, and set the root of the line among the <b>' + ya.root + '</b>.');
-  if (s.rooms.track.done && ya.pieces) rows.push('Laid <b>' + ya.pieces + '</b> pieces of track where the cells link, with <b>' + ya.wagons + '</b> test wagons' + (w.apart ? ', and left the ' + w.apart + ' off the line.' : '.'));
-  if (s.rooms.timetable.done && ya.genes) rows.push('Smoothed five genes along pseudotime at a span of <b>' + ya.span + '</b>, and read the order they come on in: <b>' + ya.genes.join(', ') + '</b>.');
-  if (s.rooms.clock.done && ya.oldest) rows.push('Checked the direction against real time: the <b>' + ya.oldest.toLowerCase() + '</b> sample has <b>' + ya.far + '%</b> of its cells past half-way, more than either younger one.');
-  if (s.rooms.board.done && ya.lines) rows.push('Hung the departure board for Vera: <b>' + ya.lines.length + '</b> lines, with an order on it and no times.');
+  const s = G.state, rows = Object.keys(LOG).map(book.line).filter(r => r);
   const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
   if (lent) rows.push('Tomo ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');

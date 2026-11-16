@@ -1,8 +1,9 @@
 /* The institute, seen from above: the way from one stage of a project to the next. A road runs
    from the arrivals bay past every stage on the project's route (js/scenarios.js). Stages that
-   are built stand as buildings; stages still to come are building sites. The player walks the
-   road, and goes in where they like. A stage works on what the stages before it make: skip one,
-   and the student will do it, with default settings and no stars. */
+   are built stand as buildings; stages still to come are building sites. The ending of a project
+   (a stage marked `end`) stands last on the road, beyond the building sites. The player walks
+   the road, and goes in where they like. A stage works on what the stages before it make: skip
+   one, and the student will do it, with default settings and no stars. */
 (function () {
 'use strict';
 const { R, T, C, VW, VH } = G;
@@ -26,8 +27,11 @@ const nextUp = () => nodes.findIndex(n => n.kind === 'stage' && n.open && !done(
 function build() {
   const sc = G.scenario(); nodes = [];
   nodes.push({ kind: 'board', name: 'REQUESTS' }, { kind: 'bay', name: 'ARRIVALS' });
-  sc.route.forEach(id => { const st = G.STAGES[id]; nodes.push({ kind: 'stage', id, open: G.playable(id), name: st.name, n: st.n, col: st.col }); });
+  const stage = id => { const st = G.STAGES[id]; nodes.push({ kind: 'stage', id, open: G.playable(id), name: st.name, n: st.n, col: st.col, end: !!st.end }); };
+  /* the stages, then what is still to come, then the ending: a project is reviewed last, whatever is built in between */
+  sc.route.filter(id => !G.STAGES[id].end).forEach(stage);
   sc.coming.forEach(name => nodes.push({ kind: 'soon', name }));
+  sc.route.filter(id => G.STAGES[id].end).forEach(stage);
   nodes = nodes.slice(0, PLOTS.length);
   nodes.forEach((n, i) => { n.x = PLOTS[i][0]; n.y = PLOTS[i][1]; });
 }
@@ -36,7 +40,7 @@ function showBook() {
   const sc = G.scenario();
   G.book.show({
     floor: 'The institute', room: sc.title.charAt(0) + sc.title.slice(1).toLowerCase(), file: 'js/scenarios.js', fileText: 'add a stage or a project', fileTail: ' yourself.', methods: true,
-    goals: nodes.filter(n => n.kind === 'stage' && n.open).map(n => ({ id: n.id, text: n.n + '. ' + n.name.charAt(0) + n.name.slice(1).toLowerCase() + ': ' + G.STAGES[n.id].what.toLowerCase() + (done(n) ? ' (' + stars(n) + ' stars)' : '') })),
+    goals: nodes.filter(n => n.kind === 'stage' && n.open).map(n => ({ id: n.id, text: (n.n ? n.n + '. ' : '') + n.name.charAt(0) + n.name.slice(1).toLowerCase() + ': ' + G.STAGES[n.id].what.toLowerCase() + (done(n) ? ' (' + stars(n) + (stars(n) === 1 ? ' star)' : ' stars)') : '') })),
     notes: [
       { id: 'm-road', open: true, html: 'The road is the project. Every project starts the same way, because the data is made the same way. Where it goes after that depends on the question.' },
       { id: 'm-skip', open: true, html: 'A stage works on what the stages before it make. Skip one and your student Tomo will run it for you, with default settings and no stars.' },
@@ -144,7 +148,8 @@ function ground() {
 function road() {
   const up = nextUp();
   for (let i = 0; i < nodes.length - 1; i++) {
-    const a = nodes[i], b = nodes[i + 1], lit = i >= 1 && (up < 0 || i < up) && nodes[i + 1].kind === 'stage' && nodes[i + 1].open;
+    /* lit as far as the player has come, and on past a building site where an open stage lies beyond it */
+    const a = nodes[i], b = nodes[i + 1], lit = i >= 1 && (up < 0 || i < up) && nodes.slice(i + 1).some(n => n.kind === 'stage' && n.open);
     const n = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 4));
     for (let k = 0; k <= n; k++) { const x = Math.round(G.lerp(a.x, b.x, k / n)), y = Math.round(G.lerp(a.y, b.y, k / n)); R(x - 2, y - 1, 5, 3, '#2b2a3a'); }
     for (let k = 0; k <= n; k += 2) { const x = Math.round(G.lerp(a.x, b.x, k / n)), y = Math.round(G.lerp(a.y, b.y, k / n)); R(x, y, 1, 1, lit ? C.amber : '#57566a'); }
@@ -174,12 +179,21 @@ function place(n, i) {
     R(x + 12, y - 25, 3, 3, Math.floor(t * 2) % 2 ? C.amber : '#5a4a20');
     return;
   }
-  /* a built stage: walls, a roof in the stage's colour, lit windows, a door, and a number plate */
   const fin = done(n);
-  R(x - 17, y - 24, 34, 24, '#16101c'); R(x - 16, y - 20, 32, 20, '#3d4a70'); R(x - 18, y - 25, 36, 6, n.col); R(x - 18, y - 25, 36, 1, 'rgba(255,255,255,.4)');
-  for (let k = 0; k < 3; k++) { const on = (Math.floor(t * 0.5 + k * 1.7 + n.n) % 5) !== 0; R(x - 13 + k * 10, y - 15, 5, 5, on ? '#f6dc8c' : '#232d4b'); }
-  R(x - 3, y - 8, 7, 8, '#0c1329'); R(x - 2, y - 7, 5, 7, i === at ? '#f6dc8c' : '#30406d');
-  R(x - 16, y - 34, 11, 10, C.ink); T(String(n.n), x - 13, y - 34, n.col, { f: 'smb' });
+  if (n.end) {
+    /* the ending: a gallery with a pediment and four columns, and a ribbon where the others carry a number */
+    R(x - 18, y - 21, 36, 21, '#16101c'); R(x - 17, y - 20, 34, 20, '#4a2733'); R(x - 19, y - 23, 38, 4, n.col); R(x - 19, y - 23, 38, 1, 'rgba(255,255,255,.5)');
+    for (let k = 0; k < 6; k++) R(x - 15 + k * 3, y - 24 - k, 30 - k * 6, 1, n.col);
+    for (let k = 0; k < 4; k++) { R(x - 15 + k * 9, y - 19, 3, 17, '#cfc8b4'); R(x - 15 + k * 9, y - 19, 1, 17, 'rgba(255,255,255,.4)'); }
+    R(x - 18, y - 2, 36, 2, '#8f8a7c'); R(x - 3, y - 10, 6, 8, i === at ? '#f6dc8c' : '#16101c');
+    R(x - 17, y - 36, 11, 12, C.ink); R(x - 14, y - 30, 2, 5, C.coral); R(x - 11, y - 30, 2, 5, C.coral); G.disc(x - 12, y - 31, 3, C.coral); R(x - 13, y - 32, 3, 3, C.amber);
+  } else {
+    /* a built stage: walls, a roof in the stage's colour, lit windows, a door, and a number plate */
+    R(x - 17, y - 24, 34, 24, '#16101c'); R(x - 16, y - 20, 32, 20, '#3d4a70'); R(x - 18, y - 25, 36, 6, n.col); R(x - 18, y - 25, 36, 1, 'rgba(255,255,255,.4)');
+    for (let k = 0; k < 3; k++) { const on = (Math.floor(t * 0.5 + k * 1.7 + n.n) % 5) !== 0; R(x - 13 + k * 10, y - 15, 5, 5, on ? '#f6dc8c' : '#232d4b'); }
+    R(x - 3, y - 8, 7, 8, '#0c1329'); R(x - 2, y - 7, 5, 7, i === at ? '#f6dc8c' : '#30406d');
+    R(x - 16, y - 34, 11, 10, C.ink); T(String(n.n), x - 13, y - 34, n.col, { f: 'smb' });
+  }
   if (fin) { R(x + 10, y - 36, 1, 12, C.paper); R(x + 11, y - 36, 6, 4, C.mint); }
   /* its stars, beside it; over the roof where the next building stands close on that side */
   const s = stars(n), tight = nodes.some(m => m !== n && m.x > x && m.x - x < 58 && m.y > y - 13 && m.y < y + 31), sy = tight ? y - 31 : y - 12;
@@ -188,7 +202,7 @@ function place(n, i) {
 /* what the place the player stands at is, and what can be done there */
 function prompt(n) {
   const name = n.kind === 'board' ? 'REQUEST BOARD' : n.kind === 'bay' ? 'ARRIVALS: CHOOSE OR CHANGE YOUR PROJECT'
-    : n.kind === 'soon' ? 'BUILDING SITE: ' + n.name : !n.open ? 'BUILDING SITE: ' + n.name + ', FOR THESE CELLS' : n.n + '  ' + n.name + ': ' + G.STAGES[n.id].what;
+    : n.kind === 'soon' ? 'BUILDING SITE: ' + n.name : !n.open ? 'BUILDING SITE: ' + n.name + ', FOR THESE CELLS' : (n.n ? n.n + '  ' : '') + n.name + ': ' + G.STAGES[n.id].what;
   const what = n.kind === 'board' ? 'READ' : n.kind === 'soon' || n.open === false ? 'READ THE SIGN' : 'GO IN';
   const hint = G.kt('ARROWS: WALK   SPACE: ' + what, 'TAP A PLACE TO GO THERE');
   R(0, VH - 22, VW, 22, 'rgba(8,12,26,.9)'); R(0, VH - 22, VW, 1, C.slate);

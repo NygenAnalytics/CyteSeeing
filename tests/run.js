@@ -1,5 +1,5 @@
 // Runs the test scripts and says which passed.
-//   node tests/run.js quick          the maths, a new player's first minutes, loading over http, switching projects, an old save
+//   node tests/run.js quick          the maths, a new player's first minutes, loading over http, switching projects, saves of older versions
 //   node tests/run.js full           the above, then every stage by keyboard and by touch for both projects, memory and fuzz
 //   node tests/run.js stage3 touch4  any tests by name
 // Each script plays the game in a headless browser (Playwright) through the hooks the game offers when the
@@ -17,9 +17,11 @@ const QUICK = [
   T('smoke', 'smoke.js', { want: [/scene: corridor floor make/] }),
   T('http', 'http.js', { url: true, want: [/200 systems\//, /scene pca/], not: [/ 404 /] }),
   T('projects', 'projects.js', { want: [/back on cortex stars \d+\/\d+ droplets done\? true/] }),
-  T('oldsave:response', 'oldsave.js', { project: 'response', want: [/loaded \{"rooms":31,.*"stars":"42\/78"/, /station scales play heaps 12/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
-  T('oldsave:cortex', 'oldsave.js', { project: 'cortex', want: [/loaded \{"rooms":31,.*"stars":"42\/78"/, /station turntable play roads 3/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
-];
+  T('oldsave:response', 'oldsave.js', { project: 'response', want: [/loaded \{"rooms":32,.*"stars":"42\/81"/, /station scales play heaps 12/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
+  T('oldsave:cortex', 'oldsave.js', { project: 'cortex', want: [/loaded \{"rooms":32,.*"stars":"42\/81"/, /station turntable play roads 3/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
+  /* and a save of version 8, with five stages done and nothing in it about the ending */
+].concat(both('oldsave-v8', 'oldsave.js', { args: ['v8'], want: [/loaded \{"rooms":32,"close":\{"done":false,"stars":0\},"tries":0,"review":null,"finished":\{\},"stars":"50\/81"/, /soon:\S+( \S+)* stage:gallery$/m,
+  /gallery frames 26 complete true/, /settled 1 lectern: VERA: The floor comes first\. 1 of the 5/, /saved \{"droplets":\{"done":true,"stars":2\},"hvg":\{"done":true,"stars":0,"by":"student"\},"close":\{"done":false,"stars":0\}/] }));
 const FULL = QUICK.concat(
   both('stage1', 'stage1.js', { want: [/droplets:3 cliff:3 qc:3 soup:3 doublet:3 review:2/] }),
   both('stage2', 'stage2.js', { want: [/norm:2 hvg:3 pca:3 knn:1 umap:2 club:3/] }),
@@ -27,7 +29,7 @@ const FULL = QUICK.concat(
   both('stage3-slips', 'stage3.js', { args: ['slips'], want: [/"chief:3"/] }),
   both('stage4', 'stage4.js', { args: ['clean'], want: [ALL4] }),
   [T('touch-start', 'touch-start.js', { want: [/pixel scene corridor stage make met true/] }),
-    T('touch1', 'touch1.js', { want: [/18\/78/], limit: 420 }),
+    T('touch1', 'touch1.js', { want: [/18\/81/], limit: 420 }),
     T('touch2', 'touch2.js', { want: [/norm:3 hvg:3 pca:3/], limit: 420 })],
   both('touch3', 'touch3.js', { want: [ALL3], limit: 420 }),
   both('touch4', 'touch4.js', { want: [/pixel rooms \[3,3,3,3\]/], limit: 520 }),
@@ -38,6 +40,12 @@ const FULL = QUICK.concat(
     T('stage5-slips:cortex', 'stage5-cortex.js', { project: 'cortex', args: ['slips'], want: [ONE5], limit: 420 }),
     T('touch5:response', 'touch5.js', { project: 'response', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 }),
     T('touch5:cortex', 'touch5-cortex.js', { project: 'cortex', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 })],
+  /* the end of each project, the Long Gallery, from a save with every stage done (done.js): by keyboard without a slip and with
+     every kind of slip, for a player whose wall is not full, and by touch */
+  both('gallery', 'gallery.js', { args: ['clean'], want: [/name tags that touch 0/, /plates checked 26 too long 0/, /hall lines checked \d+ do not fit 0/, /close lines checked \d+ do not fit 0 .* fits/, /gallery clean close \{"done":true,"stars":3\} slips 0 stars 81\/81/] }),
+  both('gallery-slips', 'gallery.js', { args: ['slips'], want: [/close end stars 1 slips 2\d/, /again: scene corridor at 44 settled 0 slips 0 next q0 \{"done":true,"stars":1\}/], limit: 420 }),
+  both('gallery-hung', 'gallery.js', { args: ['hung'], want: [/hung: complete false floor gallery frames 26 lent 21/, /plates checked 26 too long 0/, /full: complete true/, /settled 1 slips 0/, /gallery hung close \{"done":true,"stars":3\} slips 0 stars 13\/81 finished \{"\w+":\{"stars":13,"max":81,"lent":21\}\}/] }),
+  both('gallery-touch', 'touch-gallery.js', { want: [/pixel close 3 slips 0/], limit: 520 }),
   [T('soak', 'soak.js', { args: ['8'], noOut: true, check: flat }),
     T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] })]);
 

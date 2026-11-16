@@ -1,9 +1,11 @@
 // shared helpers for the playthrough scripts
 const { chromium, devices } = require('playwright');
-module.exports = async function open(indexPath, outDir, opts) {
+module.exports = async function open(indexPath, outDir, opts, before) {
   const b = await chromium.launch();
   const errs = [];
   const ctx = await b.newContext(opts || { viewport: { width: 1400, height: 820 }, deviceScaleFactor: 1 });
+  /* a script may put a save of its own in the browser first (see done.js) */
+  if (before) await before(ctx);
   /* a player who has signed in and taken a project (SCEN: response or cortex), so the title leads straight into the first hall */
   const scen = process.env.SCEN || 'response';
   await ctx.addInitScript(sc => { if (!localStorage.getItem('cyteseeing-profile-v1')) localStorage.setItem('cyteseeing-profile-v1', JSON.stringify({ name: 'ARI', scenario: sc, sound: false, metVera: true })); }, scen);

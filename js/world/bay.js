@@ -53,7 +53,7 @@ function use(it, api) {
   if (it.kind === 'parcel') {
     const sc = G.SCENARIOS[it.id];
     G.sfx('blip');
-    if (G.profile.scenario === it.id) { api.say(['LABEL: ' + sc.label + ' This one is yours.'], null); return true; }
+    if (G.profile.scenario === it.id) { api.say(['LABEL: ' + sc.label + ' This one is yours.' + (G.finished(it.id) ? ' It has been reviewed.' : '')], null); return true; }
     api.ask('LABEL: ' + sc.label, ['PUT IT BACK', 'TAKE THIS PROJECT'], k => { if (k === 1) take(it.id, api); }, 1);
     return true;
   }
@@ -77,6 +77,8 @@ function parcel(it, x, mine, t) {
   if (mine) { R(x - 19, 92, 38, 4, '#c9c2b0'); R(x - 15, 97, 30, 4, '#0c1016'); }
   else { R(x - 19, 97, 38, 5, '#f4efe0'); R(x - 19, 101, 38, 1, '#c9c2b0'); }
   R(x - 12, 117, 24, 8, C.paper); T(sc.parcel, x, 117, C.ink, { a: 'center' });
+  /* a project that has been through its review wears a ribbon */
+  if (G.finished(it.id)) { R(x + 9, 103, 3, 9, C.coral); R(x + 14, 103, 3, 9, C.coral); G.disc(x + 13, 102, 5, C.coral); G.disc(x + 13, 102, 3, C.amber); R(x + 12, 101, 3, 3, C.paper); }
   if (!G.reduced) for (let i = 0; i < 3; i++) { const u = (t * 0.4 + i / 3) % 1; R(x - 12 + i * 11, 98 - Math.round(u * 12), 2, 1, 'rgba(220,240,255,' + (0.5 - u * 0.5).toFixed(2) + ')'); }
   const plate = mine ? 'YOUR PROJECT' : sc.parcel, w = Math.ceil(G.tw(plate, 'sm')) + 8;
   G.panel(x - w / 2, 72, w, 12, { border: mine ? C.mint : sc.col, fill: C.ink }); T(plate, x, 73, mine ? C.mint : C.fog, { a: 'center' });

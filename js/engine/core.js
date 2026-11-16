@@ -54,6 +54,7 @@ function fresh() {
       sort: { done: false, stars: 0 }, wash: { done: false, stars: 0 }, lost: { done: false, stars: 0 }, counter: { done: false, stars: 0 },
       scales: { done: false, stars: 0 }, formula: { done: false, stars: 0 }, stairs: { done: false, stars: 0 }, census: { done: false, stars: 0 }, readout: { done: false, stars: 0 },
       turntable: { done: false, stars: 0 }, track: { done: false, stars: 0 }, timetable: { done: false, stars: 0 }, clock: { done: false, stars: 0 }, board: { done: false, stars: 0 },
+      close: { done: false, stars: 0 },
     },
     floor: 'make',   // which stage the player is in
     cloud: null,     // the choices made on floor 2: { depth, log, method, n, block, dims, k, seed, pack }
@@ -61,12 +62,13 @@ function fresh() {
     laundry: null,   // the wash on floor 4: { theta }
     weigh: null,     // what was weighed in stage 5: { stamps, formula, rule, rate, ref, sentence }
     yard: null,      // what was put in order in stage 5 of a project with a line: { root, sent, stops, span, genes, ranked, lines }
+    review: null,    // the questions from the floor at the end of the project: { settled: { room: true }, slips, hung, open }
     load: null,      // what you loaded in 1-1: { R, lanes, singlets, doublets, rate }
     calls: null,     // what you called in 1-2: { called, recall, empties, doublets }
     qc: null,        // what you filtered in 1-3
     soup: null,      // what you corrected in 1-4
     dbl: null,       // what you removed in 1-5
-    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0, cut: 0, lineup: 0, name: 0, oracle: 0, chief: 0, sort: 0, wash: 0, lost: 0, counter: 0, scales: 0, formula: 0, stairs: 0, census: 0, readout: 0, turntable: 0, track: 0, timetable: 0, clock: 0, board: 0 },
+    tries: { droplets: 0, cliff: 0, qc: 0, soup: 0, doublet: 0, review: 0, norm: 0, hvg: 0, pca: 0, knn: 0, umap: 0, club: 0, cut: 0, lineup: 0, name: 0, oracle: 0, chief: 0, sort: 0, wash: 0, lost: 0, counter: 0, scales: 0, formula: 0, stairs: 0, census: 0, readout: 0, turntable: 0, track: 0, timetable: 0, clock: 0, board: 0, close: 0 },
     notes: {},       // field notes unlocked so far
     eggs: {}, met: false, sound: false,
   };
@@ -76,7 +78,10 @@ G.state = fresh();
    one keeps the key the game has always used, so an old save is still there. */
 const PROFILE_KEY = 'cyteseeing-profile-v1', OLD_FLOORS = { g: 'make', 2: 'map', 3: 'who', 4: 'runs' };
 const slotKey = id => (!id || id === 'response' ? SAVE_KEY : SAVE_KEY + ':' + id);
-G.profile = { name: '', scenario: null, sound: false };
+/* `finished` is the record of the projects that have been through their review: { stars, max, lent }
+   for each. It is kept here and not with a project's progress, so the arrivals bay can show it
+   whichever project is in hand. */
+G.profile = { name: '', scenario: null, sound: false, finished: {} };
 function readSlot(id) {
   let st = fresh();
   if (id) try {
@@ -94,7 +99,7 @@ function readSlot(id) {
 G.loadSave = function () {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
-    if (p) Object.assign(G.profile, p);
+    if (p) { Object.assign(G.profile, p); if (!G.profile.finished) G.profile.finished = {}; }
     else {
       /* a save from before there were projects belongs to the first project */
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
@@ -125,10 +130,12 @@ G.route = () => { const sc = G.scenario(); return sc ? sc.route.filter(G.playabl
 G.resetSave = function () {
   const snd = G.profile.sound;
   try { Object.keys(G.SCENARIOS || {}).forEach(id => localStorage.removeItem(slotKey(id))); localStorage.removeItem(PROFILE_KEY); } catch (e) {}
-  G.profile = { name: '', scenario: null, sound: snd };
+  G.profile = { name: '', scenario: null, sound: snd, finished: {} };
   G.setScenario(null);
 };
 G.hasProgress = () => !!G.profile.scenario;
+/* a project has been through its review: null, or what was written down when it was */
+G.finished = id => (G.profile.finished && G.profile.finished[id]) || null;
 /* what the player is called */
 G.you = () => (G.profile.name || 'ARI');
 /* stars count over the rooms of the current project */

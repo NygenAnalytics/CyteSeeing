@@ -46,6 +46,12 @@ const { chromium } = require('playwright');
       for (const k of ['Space', 'ArrowRight', 'Space', 'ArrowDown', 'Space']) await p.keyboard.press(k);
       await p.waitForTimeout(120);
     }
+    /* the Long Gallery is a hall made when it opens: its frames, the plate of each, somebody with a question in tow, and the close again */
+    await p.evaluate(() => window.__game.go('corridor', { floor: 'gallery', from: 'lift' })); await p.waitForTimeout(700);
+    for (let i = 0; i < 6; i++) await p.keyboard.press('Space');
+    const wall = await p.evaluate(() => { const d = window.__game.kits.gallery.dbg; return d.askers().map(a => a.home).concat(d.frames().filter((f, i) => i % 4 === 0).map(f => f.x)); });
+    for (const x of wall) { await p.evaluate(v => window.__game.scenes.corridor.dbg.at(v), x); await p.waitForTimeout(90); for (const k of ['Space', 'Space', 'Space']) await p.keyboard.press(k); }
+    await p.evaluate(() => window.__game.go('close', {})); await p.waitForTimeout(350); for (let i = 0; i < 14; i++) await p.keyboard.press('Space');
     await p.evaluate(() => window.__game.go('corridor', { floor: window.__game.state.floor }));
     await p.waitForTimeout(400);
     series.push(await measure('round ' + r + ' ' + id + ' ' + playable.length + ' scenes'));

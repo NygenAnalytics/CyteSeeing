@@ -2,14 +2,15 @@
    A STAGE is a place: a hall and the stations in it. `rooms` are its stations in order (the last
    one closes the stage), `makes` are the ones later stages depend on, `hall` are the scripts the
    hall itself needs and `scenes` the script of each station. `systems` lists the cell systems a
-   stage is written for; leave it out when the stage works for any.
+   stage is written for; leave it out when the stage works for any. `end` marks the ending of a
+   project: the last entry of a route.
    A SCENARIO is a project: a question, a cell system (js/systems) and a route through the stages.
    To add a stage, add it here and put its files in js/stages/<id>/. To add a project, add it
    here; to add a tissue, add a file to js/systems/. */
 (function () {
 'use strict';
 const C = G.C;
-G.VERSION = '8';
+G.VERSION = '9';
 G.STAGES = {
   /* not a stage of any project: the hall where a project is chosen */
   bay: { n: 0, name: 'ARRIVALS', mentor: 'VERA', rooms: [], makes: [], hall: [], scenes: {} },
@@ -39,6 +40,12 @@ G.STAGES = {
     rooms: ['turntable', 'track', 'timetable', 'clock', 'board'], makes: ['turntable', 'track', 'timetable', 'clock'],
     hall: ['data/maths.js', 'data/line.js', 'stages/order/hall.js'],
     scenes: { turntable: 'stages/order/turntable.js', track: 'stages/order/track.js', timetable: 'stages/order/timetable.js', clock: 'stages/order/clock.js', board: 'stages/order/board.js' } },
+  /* the end of a project: its review. `end` puts it last on the road, after the stages still to come. It has no
+     number and no stations: one hall, where the work of every other stage on the route hangs, and a close */
+  gallery: { name: 'THE LONG GALLERY', what: 'THE REVIEW', mentor: 'VERA', col: C.paper, end: true, systems: ['immune', 'brain'], pack: 'gallery',
+    rooms: ['close'], makes: [],
+    hall: ['stages/gallery/hall.js'],
+    scenes: { close: 'stages/gallery/close.js' } },
 };
 /* `route` lists every stage the project will have. A stage that is not built yet, or not yet
    written for the project's cells, shows on the map as still to come. */
@@ -46,13 +53,13 @@ G.SCENARIOS = {
   response: { system: 'immune', col: C.coral, parcel: 'BLOOD', from: 'THE CLINIC',
     title: 'WHY DO SOME PATIENTS RESPOND?', sample: 'BLOOD, BEFORE AND AFTER TREATMENT',
     label: 'Blood from the clinic, taken before and after a treatment. The question: why do some patients respond?',
-    route: ['make', 'map', 'who', 'runs', 'changes'], coming: ['WHO SIGNALS', 'THE REVIEW'],
+    route: ['make', 'map', 'who', 'runs', 'changes', 'gallery'], coming: ['WHO SIGNALS'],
     brief: ['VERA: Twelve patients started the same treatment. Six got better. Nobody can say why.',
       'VERA: That box holds their blood, taken before and after. Find what differs between them.'] },
   cortex: { system: 'brain', col: C.mint, parcel: 'BRAIN', from: 'THE TISSUE BANK',
     title: 'HOW DOES A CORTEX BUILD ITSELF?', sample: 'DEVELOPING CORTEX, THREE STAGES',
     label: 'Tissue from the tissue bank: developing cortex, at three ages. The question: how does a cortex build itself?',
-    route: ['make', 'map', 'who', 'runs', 'order'], coming: ['WHICH FATE', 'THE REVIEW'],
+    route: ['make', 'map', 'who', 'runs', 'order', 'gallery'], coming: ['WHICH FATE'],
     brief: ['VERA: A cortex builds itself from one sheet of stem cells. Nobody tells it how.',
       'VERA: That box holds tissue from three stages of development. Find who is there, and who comes from whom.'] },
 };

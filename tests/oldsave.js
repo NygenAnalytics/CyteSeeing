@@ -1,8 +1,12 @@
 // A save from before stage 5 existed: it has no rooms, no tries and no slot for the Weigh House or the Marshalling Yard.
 // It must load with its stars, show the new stage open on the map, and play. SCEN says which project the save is of.
-const { chromium } = require('playwright');
+//   node oldsave.js <index.html> <out>      a save of version 6: four stages done
+//   node oldsave.js <index.html> <out> v8   a save of version 8: five stages done, written before the Long Gallery existed.
+//                                           It has no room for the close, no record of the review, and a profile that lists no finished project
+const { chromium } = require('playwright'), done = require('./done.js');
 (async () => {
-  const [,, indexPath, outDir] = process.argv, scen = process.env.SCEN === 'cortex' ? 'cortex' : 'response';
+  const [,, indexPath, outDir, version] = process.argv, scen = process.env.SCEN === 'cortex' ? 'cortex' : 'response';
+  if (version === 'v8') { await v8(indexPath, outDir, scen); return; }
   /* where each project keeps its progress, the first station of its fifth stage, and what that station lays out */
   const SLOT = scen === 'cortex' ? 'cyteseeing-save-v1:cortex' : 'cyteseeing-save-v1', FIRST = scen === 'cortex' ? ['turntable', 'roads'] : ['scales', 'heaps'];
   const b = await chromium.launch(), ctx = await b.newContext({ viewport: { width: 1400, height: 820 } });
@@ -43,3 +47,39 @@ const { chromium } = require('playwright');
   console.log('saved', JSON.stringify(saved));
   console.log('ERRORS', JSON.stringify(errs.slice(0, 6))); await b.close();
 })();
+
+// version 8: every stage of the project done, and nothing in the save about its ending
+async function v8(indexPath, outDir, scen) {
+  const d = done(scen, { stars: 2, by: ['hvg'] });
+  delete d.state.rooms.close; delete d.state.tries.close; delete d.state.review;
+  const b = await chromium.launch(), ctx = await b.newContext({ viewport: { width: 1400, height: 820 } });
+  await ctx.addInitScript(q => { if (localStorage.getItem('cyteseeing-profile-v1')) return; localStorage.setItem('cyteseeing-profile-v1', q[0]); localStorage.setItem(q[1], q[2]); }, [JSON.stringify(d.profile), d.key, JSON.stringify(d.state)]);
+  const p = await ctx.newPage(), errs = [];
+  p.on('pageerror', e => errs.push('PAGEERROR ' + e.message + ' @ ' + (e.stack || '').split('\n')[1])); p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });
+  await p.goto('file://' + indexPath + '?debug'); await p.waitForFunction(() => window.__game && window.__game.scene, null, { timeout: 15000 }); await p.waitForTimeout(800);
+  const wait = ms => p.waitForTimeout(ms), key = async (k, n = 1) => { for (let i = 0; i < n; i++) { await p.keyboard.press(k); await wait(130); } };
+  const shot = n => p.locator('#screen').screenshot({ path: `${outDir}/${n}.png` }), busy = () => p.evaluate(() => __game.scenes.corridor.dbg.busy());
+  const hush = async () => { for (let i = 0; i < 12 && await busy(); i++) { await key('Space'); await wait(250); } };
+  const st = await p.evaluate(() => { const s = __game.state; return { rooms: Object.keys(s.rooms).length, close: s.rooms.close, tries: s.tries.close, review: s.review, finished: __game.profile.finished, stars: __game.totalStars() + '/' + __game.maxStars(), route: __game.route() }; });
+  console.log('loaded', JSON.stringify(st));
+  /* the notebook's log is written on the title screen, before any cell system has arrived */
+  console.log('log lines on the title screen', await p.evaluate(() => document.querySelectorAll('#nb-log li').length));
+  await key('Space'); await wait(2600); await hush(); console.log('scene', await p.evaluate(() => __game.scene()), 'floor', await p.evaluate(() => __game.state.floor));
+  /* the fifth stage is finished, so the way on is open: out to the map, past the building site, and into the gallery */
+  await wait(1500); await key('l'); await wait(1200);
+  const nodes = await p.evaluate(() => __game.scenes.campus.dbg.nodes()); console.log('map', nodes.map(n => n.kind + ':' + (n.id || n.name) + (n.open === false ? '(shut)' : '')).join(' '));
+  await shot('0_map'); await key('ArrowRight'); await wait(1000); await key('ArrowRight'); await wait(1000); await shot('1_map_end'); await key('Space'); await wait(2400);
+  console.log('scene', await p.evaluate(() => __game.scene()), 'floor', await p.evaluate(() => __game.state.floor), 'said', await p.evaluate(() => __game.said));
+  await hush(); await shot('2_gallery');
+  const g = (fn, a) => p.evaluate(([f, x]) => __game.kits.gallery.dbg[f](x), [fn, a]);
+  const frames = await g('frames'), askers = await g('askers');
+  console.log('gallery frames', frames.length, 'complete', await g('complete'), 'plate', JSON.stringify((await g('plate', 'hvg')).text), '|', JSON.stringify((await g('plate', 'soup')).text));
+  /* the first question, taken to its frame; then the lectern, which waits for the other four */
+  await p.evaluate(x => __game.scenes.corridor.dbg.at(x), askers[0].home); await wait(300); await key('Space'); await wait(300); await hush(); await wait(200);
+  await p.evaluate(x => __game.scenes.corridor.dbg.at(x), frames.find(f => f.room === askers[0].room).x); await wait(300); await key('Space'); await wait(300); await shot('3_answered'); await hush();
+  await p.evaluate(x => __game.scenes.corridor.dbg.at(x), await g('lectern')); await wait(300); await key('Space'); await wait(300); console.log('settled', await g('settled'), 'lectern:', await p.evaluate(() => __game.said)); await hush();
+  /* and the save that is written back keeps the old stars, with room for the ending */
+  const saved = await p.evaluate(k => { const s = JSON.parse(localStorage.getItem(k)); return { droplets: s.rooms.droplets, hvg: s.rooms.hvg, close: s.rooms.close, review: s.review, floor: s.floor }; }, d.key);
+  console.log('saved', JSON.stringify(saved));
+  console.log('ERRORS', JSON.stringify(errs.slice(0, 6))); await b.close();
+}
