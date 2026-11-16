@@ -10,9 +10,9 @@
 G.systems = G.systems || {};
 G.systems.brain = {
   id: 'brain',
-  /* words the notebook uses when it writes up stages 3 and 4, wherever the player is standing */
+  /* words the notebook uses when it writes up stages 3, 4 and 5, wherever the player is standing */
   book: { ref: 'a fetal cortex reference', refMethods: 'a fetal-cortex reference', doublet: 'neuron and radial glia genes',
-    loner: 'microglia', unseen: 'striatal neurons', called: 'interneurons' }, name: 'BRAIN CELLS', tissue: 'developing cortex',
+    loner: 'microglia', unseen: 'striatal neurons', called: 'interneurons', root: 'radial glia', apart: 'interneurons' }, name: 'BRAIN CELLS', tissue: 'developing cortex',
 
   /* ---- making the data ---- */
   /* SEMA3E is real but quiet: only some excitatory neurons make it. No brain cell makes haemoglobin: it

@@ -7,7 +7,7 @@
 const { spawn } = require('child_process'), http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..'), INDEX = path.join(ROOT, 'index.html'), OUT = path.join(__dirname, 'out');
 const PORT = Number(process.env.PORT) || 8765, URL ='http://127.0.0.1:' + PORT + '/index.html';
-const ALL3 = /"cut:3","lineup:3","name:3","oracle:3","chief:3"/, ALL4 = /rooms \[(\{"done":true,"stars":3\},?){4}\]/, ALL5 = /rooms \[(\{"done":true,"stars":3\},?){5}\]/;
+const ALL3 = /"cut:3","lineup:3","name:3","oracle:3","chief:3"/, ALL4 = /rooms \[(\{"done":true,"stars":3\},?){4}\]/, ALL5 = /rooms \[(\{"done":true,"stars":3\},?){5}\]/, ONE5 = /rooms \[(\{"done":true,"stars":1\},?){5}\]/;
 
 // name, script, arguments after the page, project, what the output must hold, and a time limit in seconds
 const T = (name, script, o) => Object.assign({ name, script, args: [], want: [], limit: 300 }, o);
@@ -17,7 +17,8 @@ const QUICK = [
   T('smoke', 'smoke.js', { want: [/scene: corridor floor make/] }),
   T('http', 'http.js', { url: true, want: [/200 systems\//, /scene pca/], not: [/ 404 /] }),
   T('projects', 'projects.js', { want: [/back on cortex stars \d+\/\d+ droplets done\? true/] }),
-  T('oldsave', 'oldsave.js', { want: [/loaded \{"rooms":26,.*"stars":"42\/78"/, /station scales play heaps 12/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
+  T('oldsave:response', 'oldsave.js', { project: 'response', want: [/loaded \{"rooms":31,.*"stars":"42\/78"/, /station scales play heaps 12/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
+  T('oldsave:cortex', 'oldsave.js', { project: 'cortex', want: [/loaded \{"rooms":31,.*"stars":"42\/78"/, /station turntable play roads 3/, /saved \{"droplets":\{"done":true,"stars":1\}/] }),
 ];
 const FULL = QUICK.concat(
   both('stage1', 'stage1.js', { want: [/droplets:3 cliff:3 qc:3 soup:3 doublet:3 review:2/] }),
@@ -30,10 +31,13 @@ const FULL = QUICK.concat(
     T('touch2', 'touch2.js', { want: [/norm:3 hvg:3 pca:3/], limit: 420 })],
   both('touch3', 'touch3.js', { want: [ALL3], limit: 420 }),
   both('touch4', 'touch4.js', { want: [/pixel rooms \[3,3,3,3\]/], limit: 520 }),
-  /* stage 5 is the first that only one project has */
+  /* stage 5 is where the projects part ways: each has a fifth stage of its own, with its own scripts */
   [T('stage5:response', 'stage5.js', { project: 'response', args: ['clean'], want: [ALL5] }),
-    T('stage5-slips:response', 'stage5.js', { project: 'response', args: ['slips'], want: [/rooms \[(\{"done":true,"stars":1\},?){5}\]/], limit: 420 }),
-    T('touch5:response', 'touch5.js', { project: 'response', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 })],
+    T('stage5:cortex', 'stage5-cortex.js', { project: 'cortex', args: ['clean'], want: [ALL5] }),
+    T('stage5-slips:response', 'stage5.js', { project: 'response', args: ['slips'], want: [ONE5], limit: 420 }),
+    T('stage5-slips:cortex', 'stage5-cortex.js', { project: 'cortex', args: ['slips'], want: [ONE5], limit: 420 }),
+    T('touch5:response', 'touch5.js', { project: 'response', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 }),
+    T('touch5:cortex', 'touch5-cortex.js', { project: 'cortex', want: [/pixel rooms \[3,3,3,3,3\]/], limit: 520 })],
   [T('soak', 'soak.js', { args: ['8'], noOut: true, check: flat }),
     T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] })]);
 

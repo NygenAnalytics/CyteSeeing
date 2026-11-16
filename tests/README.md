@@ -28,17 +28,17 @@ A playthrough waits fixed times between key presses, so a busy machine can make 
 
 | Script | What it checks |
 | --- | --- |
-| `maths.js` | Without a browser: for every cell system, the numbers the stations of stages 3 and 4 are tuned to (clusters at each resolution, the final clusters, the line-up, the wash verdict at each theta, the islands), and for blood the numbers of stage 5 (which claims hold on donors, which formulas jam, what every rule lights on the stairs, what one pump can do). Run this first after changing a gene table |
+| `maths.js` | Without a browser: for every cell system, the numbers the stations of stages 3 and 4 are tuned to (clusters at each resolution, the final clusters, the line-up, the wash verdict at each theta, the islands), and for blood the numbers of stage 5 (which claims hold on donors, which formulas jam, what every rule lights on the stairs, what one pump can do), and for brain the numbers of its stage 5 (which road runs the right way, which islands are joined, which lever notch reads, which train is oldest, which gene marks which state). Run this first after changing a gene table |
 | `smoke.js` | A new player: title, sign-in, the arrivals bay, taking a parcel, the map, walking into stage 1. Prints which scripts were fetched on demand |
 | `http.js` | The game served over http: a stage's scripts arrive on demand, with the version tag |
 | `projects.js` | Taking the brain project, opening its stations, switching to blood and back: each project keeps its own progress |
-| `oldsave.js` | A save written before stage 5 existed: it loads with its stars, the new stage is open on the map, and its first station plays |
-| `stage1.js` to `stage5.js` | One stage by keyboard, start to finish. `stage3.js`, `stage4.js` and `stage5.js` take `clean` or `slips` (one mistake of each kind on the way). Stage 5 is for the blood project only |
-| `touch-start.js`, `touch1.js` to `touch5.js` | The same by taps, drags and held fingers on three phone sizes |
+| `oldsave.js` | A save written before stage 5 existed, for either project: it loads with its stars, the new stage is open on the map, and its first station plays |
+| `stage1.js` to `stage5.js` | One stage by keyboard, start to finish. `stage3.js`, `stage4.js` and `stage5.js` take `clean` or `slips` (one mistake of each kind on the way). `stage5.js` is the blood project's fifth stage and `stage5-cortex.js` is the brain project's, which takes `clean` or `slips` too |
+| `touch-start.js`, `touch1.js` to `touch5.js`, `touch5-cortex.js` | The same by taps, drags and held fingers on three phone sizes |
 | `soak.js` | In and out of every scene for eight rounds, changing project each round: page elements and listeners must not grow, and the heap must settle |
 | `fuzz.js` | Random keys and clicks from a cold start: no errors, and the game keeps running |
 | `live.js` | The deployed site in a real browser: `node tests/live.js https://docs.nygen.io/CyteSeeing/ tests/out/live` |
-| `maths-bureau.js`, `maths-laundry.js`, `maths-changes.js` | The harnesses behind `maths.js`. Each also prints its full record: `node tests/maths-bureau.js brain`, `node tests/maths-changes.js` |
+| `maths-bureau.js`, `maths-laundry.js`, `maths-changes.js`, `maths-order.js` | The harnesses behind `maths.js`. Each also prints its full record: `node tests/maths-bureau.js brain`, `node tests/maths-changes.js`, `node tests/maths-order.js` |
 | `sheet.py` | Puts screenshots side by side for a quick look: `python3 tests/sheet.py out.png a.png b.png c.png` |
 
 Most scripts take the page to test and a folder for their output, and read the project from `SCEN` (`response` for blood, `cortex` for brain):

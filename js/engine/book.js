@@ -106,6 +106,12 @@ book.log = function () {
   if (s.rooms.stairs.done && we.found) rows.push('Called <b>' + we.found + '</b> of 200 genes ' + (we.rule === 'bh' ? 'at a false discovery rate of' : 'with a threshold of') + ' <b>' + Math.round(we.rate * 100) + '%</b>.');
   if (s.rooms.census.done && we.ref !== undefined && w.types) rows.push('Entered in the ledger that <b>' + w.grew + '</b> grew in number in responders, against ' + w.types[we.ref] + '.');
   if (s.rooms.readout.done && we.sentence) rows.push('Sent the clinic one sentence: <b>' + we.sentence + '</b>');
+  const ya = s.yard || {};
+  if (s.rooms.turntable.done && ya.root && ya.sent) rows.push('Sent <b>' + ya.sent + '</b> ' + (ya.sent === 1 ? 'engine' : 'engines') + ' over the band of cells, and set the root of the line among the <b>' + ya.root + '</b>.');
+  if (s.rooms.track.done && ya.pieces) rows.push('Laid <b>' + ya.pieces + '</b> pieces of track where the cells link, with <b>' + ya.wagons + '</b> test wagons' + (w.apart ? ', and left the ' + w.apart + ' off the line.' : '.'));
+  if (s.rooms.timetable.done && ya.genes) rows.push('Smoothed five genes along pseudotime at a span of <b>' + ya.span + '</b>, and read the order they come on in: <b>' + ya.genes.join(', ') + '</b>.');
+  if (s.rooms.clock.done && ya.oldest) rows.push('Checked the direction against real time: the <b>' + ya.oldest.toLowerCase() + '</b> sample has <b>' + ya.far + '%</b> of its cells past half-way, more than either younger one.');
+  if (s.rooms.board.done && ya.lines) rows.push('Hung the departure board for Vera: <b>' + ya.lines.length + '</b> lines, with an order on it and no times.');
   const lent = Object.keys(s.rooms).filter(k => s.rooms[k].by).length;
   if (lent) rows.push('Tomo ran <b>' + lent + '</b> ' + (lent === 1 ? 'step' : 'steps') + ' for you, with default settings.');
   if (!rows.length) rows.push('Nothing yet. What you do in each room follows you to the next one.');
@@ -146,6 +152,12 @@ book.methods = function () {
     : we.rule === 'bonf' ? 'P-values were adjusted for the number of genes tested by the Bonferroni method (threshold ' + we.rate + ').' : 'Genes were called at an unadjusted p-value of ' + we.rate + '.');
   if (s.rooms.census.done && we.ref !== undefined && w.types) m.push('Changes in cell-type composition were assessed with all cell types considered together, and are reported relative to ' + w.types[we.ref] + ' as the reference.');
   if (s.rooms.readout.done) m.push('The findings are associations in twelve patients. Whether they predict response was not tested in new patients.');
+  const ya = s.yard || {};
+  if (s.rooms.turntable.done) m.push('Cells of one lineage were ordered by pseudotime, the distance through the neighbour graph from a root' + (ya.root ? ' placed among the ' + ya.root + ' on the basis of marker genes.' : '.'));
+  if (s.rooms.track.done) m.push('Which cell types the lineage joins was assessed from the number of neighbour-graph links between them, relative to the number expected for links made at random (as in PAGA)' + (w.apart ? '; ' + w.apart + ' were not connected to it and were left out.' : '.'));
+  if (s.rooms.timetable.done && ya.span) m.push('Expression was smoothed along pseudotime with a Gaussian kernel (width ' + ya.span + ' of the range) to find the order in which marker genes come on.');
+  if (s.rooms.clock.done) m.push('The direction of the ordering was checked against the age of the samples. Pseudotime was not read as elapsed time.');
+  if (s.rooms.board.done) m.push('The ordering describes cell states. It gives no durations, and does not show that any one cell descends from another.');
   return m.join(' ');
 };
 

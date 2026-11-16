@@ -9,7 +9,7 @@
 (function () {
 'use strict';
 const C = G.C;
-G.VERSION = '7';
+G.VERSION = '8';
 G.STAGES = {
   /* not a stage of any project: the hall where a project is chosen */
   bay: { n: 0, name: 'ARRIVALS', mentor: 'VERA', rooms: [], makes: [], hall: [], scenes: {} },
@@ -34,6 +34,11 @@ G.STAGES = {
     rooms: ['scales', 'formula', 'stairs', 'census', 'readout'], makes: ['scales', 'formula', 'stairs', 'census'],
     hall: ['data/trial.js', 'stages/changes/hall.js'],
     scenes: { scales: 'stages/changes/scales.js', formula: 'stages/changes/formula.js', stairs: 'stages/changes/stairs.js', census: 'stages/changes/census.js', readout: 'stages/changes/readout.js' } },
+  /* the fifth stage of a project that asks how a tissue builds itself: putting the cells of a snapshot in order */
+  order: { n: 5, name: 'THE MARSHALLING YARD', what: 'PSEUDOTIME, TRAJECTORIES', mentor: 'JUN', col: C.green, systems: ['brain'], pack: 'order',
+    rooms: ['turntable', 'track', 'timetable', 'clock', 'board'], makes: ['turntable', 'track', 'timetable', 'clock'],
+    hall: ['data/maths.js', 'data/line.js', 'stages/order/hall.js'],
+    scenes: { turntable: 'stages/order/turntable.js', track: 'stages/order/track.js', timetable: 'stages/order/timetable.js', clock: 'stages/order/clock.js', board: 'stages/order/board.js' } },
 };
 /* `route` lists every stage the project will have. A stage that is not built yet, or not yet
    written for the project's cells, shows on the map as still to come. */
@@ -47,7 +52,7 @@ G.SCENARIOS = {
   cortex: { system: 'brain', col: C.mint, parcel: 'BRAIN', from: 'THE TISSUE BANK',
     title: 'HOW DOES A CORTEX BUILD ITSELF?', sample: 'DEVELOPING CORTEX, THREE STAGES',
     label: 'Tissue from the tissue bank: developing cortex, at three ages. The question: how does a cortex build itself?',
-    route: ['make', 'map', 'who', 'runs'], coming: ['IN WHAT ORDER', 'WHICH FATE', 'THE REVIEW'],
+    route: ['make', 'map', 'who', 'runs', 'order'], coming: ['WHICH FATE', 'THE REVIEW'],
     brief: ['VERA: A cortex builds itself from one sheet of stem cells. Nobody tells it how.',
       'VERA: That box holds tissue from three stages of development. Find who is there, and who comes from whom.'] },
 };

@@ -1,6 +1,6 @@
-// The numbers the stations of stages 3, 4 and 5 are tuned to, checked without a browser for every cell system.
+// The numbers the stations of stages 3, 4 and 5 are tuned to, checked without a browser for every cell system that has them.
 // A cell system's pack may change names freely. If it changes a number, these are the things that must still hold.
-const bureau = require('./maths-bureau.js'), laundry = require('./maths-laundry.js'), changes = require('./maths-changes.js'), path = require('path');
+const bureau = require('./maths-bureau.js'), laundry = require('./maths-laundry.js'), changes = require('./maths-changes.js'), order = require('./maths-order.js'), path = require('path');
 const repo = path.resolve(__dirname, '..'), bad = [];
 const same = (what, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(what + ': got ' + JSON.stringify(got) + ', want ' + JSON.stringify(want)); };
 ['immune', 'brain'].forEach(sys => {
@@ -38,6 +38,27 @@ const same = (what, got, want) => { if (JSON.stringify(got) !== JSON.stringify(w
   same('census: the match has room on both sides, and four halved is the same jar', [c.census.near[2] < 0.01, c.census.near[1] > 0.025, c.census.near[3] > 0.025, c.census.halved === c.census.near[2], ok(c.census.single.filter(s => s.type !== 'CD8T').map(s => s.gap > 0.05))], [true, true, true, true, true]);
   same('census: what the ledger marks against each reference', c.census.ledger.map(l => l.rows.filter(r => / \*$/.test(r)).map(r => r.split(' ')[0]).join(',')), ['CD8T', 'CD4T,NK,B,MONO', 'CD8T', 'CD8T', 'CD8T']);
   same('census: nothing grew in the other patients', ok(c.census.others.map(p => p > 0.2)), true);
+}
+/* the Marshalling Yard, which only the cortex project has: every lesson with its margin */
+{
+  const o = order.record(order.boot(repo, 'brain')), ok = v => v.every(x => x), stem = o.roads[o.stem], far = o.roads[2 - o.stem], pair = n => o.pairs.find(q => q.pair === n);
+  same('yard: cells of each state', o.cells.byState, [125, 40, 75, 90, 36, 36]);
+  same('turntable: where the three roads end, and which way each order runs', o.roads.map(r => r.tip + (r.right ? ' right' : r.back ? ' backwards' : ' neither')), ['MAT backwards', 'IPC neither', 'RG right']);
+  same('turntable: the root at the stem end is all stem cells, and nothing reaches the cells that are apart', [stem.root, o.roads.map(r => r.unreached)], ['RG,RG,RG,RG,RG', [36, 36, 36]]);
+  same('turntable: the lamp genes run clearly with one order and against the other', [stem.early < -0.75, stem.late > 0.7, far.early > 0.75, far.late < -0.7, Math.abs(o.roads[1].early) < 0.3], [true, true, true, true, true]);
+  same('turntable: pseudotime follows the hidden position', stem.withHidden > 0.92, true);
+  same('track: the pieces that hold', o.pieces, ['RG-IPC', 'RG-OPC', 'IPC-NEW', 'NEW-MAT']);
+  same('track: joined islands pass the mark five times over, and the rest share no link at all', [ok(o.pairs.filter(q => q.holds).map(q => q.ratio >= 0.25)), ok(o.pairs.filter(q => !q.holds).map(q => q.links === 0))], [true, true]);
+  same('track: the cells that are apart sit nearest an island of the line, nearer than that island is to the one it is joined to', [o.nearest[5], o.nearest[3], pair('MAT-INH').apart < pair('NEW-MAT').apart - 0.03], ['INH>MAT', 'MAT>INH', true]);
+  same('timetable: what the lamps show at each notch of the lever', o.lever.map(l => (l.ok ? 'reads' : (l.flicker.length ? 'flicker ' + l.flicker.length : '') + (l.lost.length ? 'lost ' + l.lost.join('+') : ''))), ['flicker 5', 'flicker 2', 'reads', 'lost EOMES', 'lost EOMES+NEUROD1+GRIN2B']);
+  same('timetable: the order the genes come on in, and the one notch that shows it', [o.arrivals, o.readable], [['PAX6', 'EOMES', 'NEUROD1', 'TBR1', 'GRIN2B'], [2]]);
+  same('timetable: at the readable notch every lamp is well lit and the lamps come on at least three stops apart', [ok(o.lever[2].peaks.map(v => v >= 0.9)), o.lever[2].gap >= 3], [true, true]);
+  same('timetable: one notch further only the short wave is lost, with room on both sides', [o.lever[3].peaks[1] <= 0.4, ok(o.lever[3].peaks.filter((v, i) => i !== 1).map(v => v >= 0.65))], [true, true]);
+  same('clock: the trains in order of progress, each well apart from the next', [o.byProgress, o.trains[1].mean - o.trains[0].mean > 0.08, o.trains[2].mean - o.trains[1].mean > 0.08], [[0, 1, 2], true, true]);
+  same('clock: the crowded stretch holds at least five times the cells of the sparse one', o.stretches.crowd[2] >= 5 * o.stretches.sparse[2], true);
+  same('board: the states in order, each well after the one before', [o.sequence.order, ok(o.sequence.median.slice(1).map((m, i) => m - o.sequence.median[i] > 0.12))], [['RG', 'IPC', 'NEW', 'MAT'], true]);
+  same('board: the states each gene can stand for', o.marks, ['GRIN2B: MAT', 'EOMES: IPC', 'GAD2: INH', 'PAX6: RG', 'TBR1: NEW,MAT', 'NEUROD1: IPC,NEW']);
+  same('board: which states are joined to the line', o.joined, [true, true, true, true, true, false]);
 }
 if (bad.length) { console.log(bad.join('\n')); process.exit(1); }
 console.log('MATHS OK');
