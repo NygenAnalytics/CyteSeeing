@@ -10,7 +10,7 @@
 (function () {
 'use strict';
 const C = G.C;
-G.VERSION = '9';
+G.VERSION = '10';
 G.STAGES = {
   /* not a stage of any project: the hall where a project is chosen */
   bay: { n: 0, name: 'ARRIVALS', mentor: 'VERA', rooms: [], makes: [], hall: [], scenes: {} },

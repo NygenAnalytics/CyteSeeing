@@ -144,7 +144,9 @@ function showBook() {
           'dds &lt;- <span class="k">DESeqDataSetFromMatrix</span>(\n    countData = counts,\n    colData = samples,\n    design = ~ donor + visit)\n' +
           'dds &lt;- <span class="k">DESeq</span>(dds)\n' +
           '<span class="k">results</span>(dds, contrast = c(\n    <span class="s">"visit"</span>, <span class="s">"after"</span>, <span class="s">"before"</span>))</pre>' +
-          '<pre class="code"><span class="c"># responders only. Donors are nested in\n# the response groups: number them 1 to 6\n# within their group, as ind.n</span>\n' +
+          '<pre class="code"><span class="c"># responders only. Donors are nested in\n# the response groups: number them 1 to 6\n# within their group, as ind.n. Make both\n# factors: a number is read as a quantity</span>\n' +
+          'dds$response &lt;- <span class="k">factor</span>(dds$response)\n' +
+          'dds$ind.n &lt;- <span class="k">factor</span>(dds$ind.n)\n' +
           '<span class="k">design</span>(dds) &lt;- ~ response +\n    response:ind.n + response:visit\n' +
           'dds &lt;- <span class="k">DESeq</span>(dds)\n' +
           '<span class="c"># the change in responders, against the\n# change in the other patients</span>\n' +
@@ -179,8 +181,8 @@ function showBook() {
           'dds.<span class="k">deseq2</span>()\n' +
           'res = <span class="k">DeseqStats</span>(dds, contrast=[\n    <span class="s">"visit"</span>, <span class="s">"after"</span>, <span class="s">"before"</span>])\n' +
           'res.<span class="k">summary</span>()\nres.results_df</pre>' +
-          '<pre class="code"><span class="c"># responders only: donor_n numbers the\n# donors 1 to 6 within their group</span>\n' +
-          'dds = <span class="k">DeseqDataSet</span>(\n    counts=counts,\n    metadata=samples,\n    design=<span class="s">"~ response"</span>\n           <span class="s">" + response:donor_n"</span>\n           <span class="s">" + response:visit"</span>,\n)\n' +
+          '<pre class="code"><span class="c"># responders only: donor_n numbers the\n# donors 1 to 6 within their group.\n# C() reads those numbers as labels</span>\n' +
+          'dds = <span class="k">DeseqDataSet</span>(\n    counts=counts,\n    metadata=samples,\n    design=<span class="s">"~ response"</span>\n           <span class="s">" + response:C(donor_n)"</span>\n           <span class="s">" + response:visit"</span>,\n)\n' +
           'dds.<span class="k">deseq2</span>()\n' +
           '<span class="c"># +1 on the responders\' "after" column,\n# -1 on the other patients\'</span>\n' +
           'cols = <span class="k">list</span>(\n    dds.obsm[<span class="s">"design_matrix"</span>].columns)\n' +

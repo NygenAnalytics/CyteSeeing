@@ -47,7 +47,9 @@ const FULL = QUICK.concat(
   both('gallery-hung', 'gallery.js', { args: ['hung'], want: [/hung: complete false floor gallery frames 26 lent 21/, /plates checked 26 too long 0/, /full: complete true/, /settled 1 slips 0/, /gallery hung close \{"done":true,"stars":3\} slips 0 stars 13\/81 finished \{"\w+":\{"stars":13,"max":81,"lent":21\}\}/] }),
   both('gallery-touch', 'touch-gallery.js', { want: [/pixel close 3 slips 0/], limit: 520 }),
   [T('soak', 'soak.js', { args: ['8'], noOut: true, check: flat }),
-    T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] })]);
+    T('fuzz', 'fuzz.js', { args: ['5'], noOut: true, project: 'both', not: [/clock moves false/] }),
+    /* a cold start never gets as far as the end of a project, so the gallery has random input of its own */
+    T('fuzz-gallery', 'fuzz-gallery.js', { args: ['7'], noOut: true, want: [/"corridor:gallery":\d+/, /"close":\d+/], not: [/clock moves false/], limit: 420 })]);
 
 // memory: the number of page elements and listeners must not grow, and the heap must settle
 function flat(out) {

@@ -34,8 +34,9 @@ const { chromium } = require('playwright');
   await wait(600); await open(['soup', 'hvg', 'lineup', 'name', 'wash', 'lost']);
   console.log('blood: six stations opened; system', await p.evaluate(() => __game.sys.id), '| scene', await scene());
   await p.locator('#screen').screenshot({ path: out + '/live_blood_lost.png' });
-  const lazy = js.slice(boot);
-  console.log('on demand in total:', lazy.length, '| all carry the version:', lazy.every(f => /\?v=6$/.test(f)), '| sample:', lazy.slice(0, 4).join(', '));
+  /* every script fetched on demand carries the version the site is serving, whatever that is today */
+  const lazy = js.slice(boot), version = await p.evaluate(() => __game.VERSION);
+  console.log('on demand in total:', lazy.length, '| version', version, '| all carry it:', lazy.every(f => f.endsWith('?v=' + version)), '| sample:', lazy.slice(0, 4).join(', '));
   console.log('failed requests', JSON.stringify(bad)); console.log('ERRORS', JSON.stringify(errs.slice(0, 6)));
   await b.close();
 })();

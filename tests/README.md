@@ -40,6 +40,7 @@ A playthrough waits fixed times between key presses, so a busy machine can make 
 | `done.js` | Not a test: the finished save the gallery tests start from. `done('cortex', { by: ['soup'], owe: ['board'] })` gives one with a step run by Tomo and a room still to do |
 | `soak.js` | In and out of every scene and along the Long Gallery for eight rounds, changing project each round: page elements and listeners must not grow, and the heap must settle |
 | `fuzz.js` | Random keys and clicks from a cold start: no errors, and the game keeps running |
+| `fuzz-gallery.js` | The same in the Long Gallery and at its close, which a cold start never reaches: from a finished save with the questions settled, one with a step that Tomo ran, and one whose wall is not full |
 | `live.js` | The deployed site in a real browser: `node tests/live.js https://docs.nygen.io/CyteSeeing/ tests/out/live` |
 | `maths-bureau.js`, `maths-laundry.js`, `maths-changes.js`, `maths-order.js` | The harnesses behind `maths.js`. Each also prints its full record: `node tests/maths-bureau.js brain`, `node tests/maths-changes.js`, `node tests/maths-order.js` |
 | `sheet.py` | Puts screenshots side by side for a quick look: `python3 tests/sheet.py out.png a.png b.png c.png` |
