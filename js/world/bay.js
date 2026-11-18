@@ -60,10 +60,13 @@ function use(it, api) {
   if (it.id === 'vera') { api.say(vera()); return true; }
   if (it.id === 'slip') {
     G.sfx('blip');
-    api.ask('REQUEST SLIP: Missing a tissue, or a kind of project? Ask for it on GitHub, and it joins the queue.', ['NOT NOW', 'OPEN GITHUB'], k => {
-      if (k === 1) { try { window.open(G.REPO + '/issues/new?title=' + encodeURIComponent('Request: a cell system or a scenario'), '_blank', 'noopener'); } catch (e) {} G.toast('IF NOTHING OPENED, THE LINK IS IN THE NOTEBOOK.', 4); }
-      api.found('slip');
-    }, 1);
+    /* the sheet, where a request is counted; where nothing is counted, the way to GitHub */
+    if (!api.sheet(close => G.requests.sheet('arrivals', close), () => api.found('slip'))) {
+      api.ask('REQUEST SLIP: Missing a tissue, or a kind of project? Ask for it on GitHub, and it joins the queue.', ['NOT NOW', 'OPEN GITHUB'], k => {
+        if (k === 1) G.requests.github();
+        api.found('slip');
+      }, 1);
+    }
     return true;
   }
   return false;

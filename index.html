@@ -223,6 +223,8 @@ span.p { display: inline-block; height: auto; }
         </div>
         <p class="src" id="nb-src"></p>
         <p class="src" id="nb-edit"></p>
+        <!-- shown only where plays are counted (js/engine/stats.js) -->
+        <p class="src" id="nb-stats" hidden>This site counts plays, without cookies and without names: which stations are played, and for how long. <a href="https://github.com/NygenAnalytics/CyteSeeing#play-statistics" target="_blank" rel="noopener">What is counted</a>.</p>
       </section>
       <section class="card" id="card-term">
         <p class="eyebrow">Terminal</p>
@@ -239,10 +241,12 @@ span.p { display: inline-block; height: auto; }
 <script src="js/engine/core.js"></script>
 <script src="js/engine/book.js"></script>
 <script src="js/engine/loader.js"></script>
+<script src="js/engine/stats.js"></script>
 <script src="js/scenarios.js"></script>
 <script src="js/world/figures.js"></script>
 <script src="js/world/title.js"></script>
 <script src="js/world/start.js"></script>
+<script src="js/world/requests.js"></script>
 <script src="js/world/bay.js"></script>
 <script src="js/world/campus.js"></script>
 <script src="js/world/hall.js"></script>

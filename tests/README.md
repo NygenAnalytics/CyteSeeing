@@ -18,7 +18,7 @@ node tests/run.js quick
 node tests/run.js full
 ```
 
-`quick` takes about three minutes and runs on every push (`.github/workflows/test.yml`). `full` plays every stage and the review at the end of both projects, by keyboard and by touch, and takes more than an hour. Name tests to run only those, for example `node tests/run.js stage3 touch4`.
+`quick` takes about four minutes and runs on every push (`.github/workflows/test.yml`). `full` plays every stage and the review at the end of both projects, by keyboard and by touch, and takes more than an hour. Name tests to run only those, for example `node tests/run.js stage3 touch4`.
 
 The runner serves the game on port 8765 for the tests that need http. Set `PORT` to use another, for example when two runs share a machine: `PORT=8766 node tests/run.js quick`.
 
@@ -32,6 +32,7 @@ A playthrough waits fixed times between key presses, so a busy machine can make 
 | `smoke.js` | A new player: title, sign-in, the arrivals bay, taking a parcel, the map, walking into stage 1. Prints which scripts were fetched on demand |
 | `http.js` | The game served over http: a stage's scripts arrive on demand, with the version tag |
 | `projects.js` | Taking the brain project, opening its stations, switching to blood and back: each project keeps its own progress |
+| `stats.js` | Play statistics and the request sheet. In a test nothing is fetched from PostHog and nothing is sent: a new player's events are written down and checked, and the name typed at sign-in must be in none of them. The sheet by keyboard and by taps. Then the way events really leave, over http, with every request to PostHog caught before it goes: no cookie, nothing kept in the browser. It uses the real library where `npm install` has put it, and a stand-in otherwise. Last, a copy with no key: it counts nothing and its board leads to GitHub |
 | `oldsave.js` | A save written before stage 5 existed, for either project: it loads with its stars, the new stage is open on the map, and its first station plays. With `v8`, a save with all five stages done that was written before the Long Gallery existed: it loads, the gallery is at the end of the road with a full wall, and the review starts |
 | `stage1.js` to `stage5.js` | One stage by keyboard, start to finish. `stage3.js`, `stage4.js` and `stage5.js` take `clean` or `slips` (one mistake of each kind on the way). `stage5.js` is the blood project's fifth stage and `stage5-cortex.js` is the brain project's, which takes `clean` or `slips` too |
 | `touch-start.js`, `touch1.js` to `touch5.js`, `touch5-cortex.js` | The same by taps, drags and held fingers on three phone sizes |

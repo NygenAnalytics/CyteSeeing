@@ -132,6 +132,9 @@ function leave() {
 const API = {
   say, found,
   ask: (text, opts, pick, sel) => { ask = { text, opts, sel: sel || 0, pick: k => { ask = null; pick(k); } }; },
+  /* a sheet that draws and steers itself, in place of a question with two answers: make(close) returns it, or
+     null where there is none to show. after() runs when the player puts it away. True if a sheet went up */
+  sheet: (make, after) => { const q = make(() => { ask = null; if (after) after(); }); if (q) ask = q; return !!q; },
   refresh: () => showBook(),
 };
 /* and what it may ask while it draws */
@@ -168,7 +171,7 @@ G.hall = { summon };
 
 G.scenes.corridor = {
   /* test hooks: jump to an x, or open a figure */
-  dbg: { at: x => { hero.x = x; cam = G.clamp(x - 150, 0, W - VW); }, fig: id => { fig = { id, t: 1 }; }, clear: () => { talk = null; fig = null; goal = null; ask = null; }, cam: () => cam, heroX: () => hero.x, busy: () => !!(talk || fig || auto || ask), asking: () => !!ask, items: () => ITEMS.map(i => [i.id, Math.round(i.x)]) },
+  dbg: { at: x => { hero.x = x; cam = G.clamp(x - 150, 0, W - VW); }, fig: id => { fig = { id, t: 1 }; }, clear: () => { talk = null; fig = null; goal = null; ask = null; }, cam: () => cam, heroX: () => hero.x, busy: () => !!(talk || fig || auto || ask), sheet: () => (ask && ask.dbg) || null, asking: () => !!ask, items: () => ITEMS.map(i => [i.id, Math.round(i.x)]) },
   enter(a) {
     talk = null; auto = null; near = null; fig = null; goal = null; runT = 0; ask = null;
     const was = floorId;
@@ -204,8 +207,11 @@ G.scenes.corridor = {
     if (kit.tick) kit.tick(dt, hero);
     if (G.hit('lift') || (G.ptr.pressed && floorsBtn().hot)) leave();
     if (ask) {
-      if (G.hit('left') || G.hit('right') || G.hit('up') || G.hit('down')) { ask.sel = 1 - ask.sel; G.sfx('tick'); }
-      if (G.hit('a')) ask.pick(ask.sel); else if (G.hit('b')) ask.pick(0);
+      if (ask.update) ask.update();
+      else {
+        if (G.hit('left') || G.hit('right') || G.hit('up') || G.hit('down')) { ask.sel = 1 - ask.sel; G.sfx('tick'); }
+        if (G.hit('a')) ask.pick(ask.sel); else if (G.hit('b')) ask.pick(0);
+      }
       return;
     }
     if (fig) {
@@ -291,7 +297,8 @@ G.scenes.corridor = {
       }
     }
     if (talk) talk.draw({ top: true });
-    if (ask) {
+    if (ask && ask.draw) ask.draw();
+    else if (ask) {
       G.caption(ask.text, 99, { top: true, noPrompt: true, border: C.amber });
       ask.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: ask.sel === i, primary: i === 1 }) && ask) ask.pick(i); });
     }

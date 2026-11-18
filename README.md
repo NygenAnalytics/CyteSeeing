@@ -144,9 +144,9 @@ Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. Al
 | Path | What it holds |
 | --- | --- |
 | `index.html` | The page: the screen, the notebook and the terminal. It loads the engine and the world only |
-| `js/engine/` | `core.js`: canvas, palette, pixel helpers, input, sound, saves, scenes, speech boxes, the main loop. `book.js`: the notebook and terminal panel. `loader.js`: fetches a stage's scripts when the player walks in. `fonts.js`, `main.js` |
+| `js/engine/` | `core.js`: canvas, palette, pixel helpers, input, sound, saves, scenes, speech boxes, the main loop. `book.js`: the notebook and terminal panel. `loader.js`: fetches a stage's scripts when the player walks in. `stats.js`: the play statistics, see below. `fonts.js`, `main.js` |
 | `js/scenarios.js` | The registry: every stage (its stations, the scripts it needs) and every project (its cell system and its route) |
-| `js/world/` | `title.js`, `start.js` (signing in), `bay.js` (choosing a project), `campus.js` (the map), `hall.js` (walking a hall: what every hall shares), `figures.js` |
+| `js/world/` | `title.js`, `start.js` (signing in), `bay.js` (choosing a project), `campus.js` (the map), `hall.js` (walking a hall: what every hall shares), `requests.js` (the request sheet), `figures.js` |
 | `js/systems/` | One file per cell system: `immune.js`, `brain.js`. Cell types, gene tables and every tissue-specific word the first two stages use. A later stage needs more of a cell system, and that is a pack of its own: `immune.who.js` and `brain.who.js` for the Bureau, `immune.runs.js` and `brain.runs.js` for the Laundry, `immune.changes.js` for the Weigh House, `brain.order.js` for the Marshalling Yard, `immune.gallery.js` and `brain.gallery.js` for the Long Gallery |
 | `js/data/` | The maths. `maths.js`: median, PCA, community detection, graph layout. `cloud.js`, `atlas.js`, `loads.js`, `trial.js`, `line.js`: the generated data behind stages 2, 3 and 4 and the two fifth stages, and what is computed on it |
 | `js/stages/make/` | The core facility's furniture (`hall.js`), rooms 1-1 to 1-5 and Reviewer 2 |
@@ -173,7 +173,16 @@ The game stays light as it grows. The page starts with about a quarter of the co
 
 Open `index.html?debug` to get `window.__game` in the console, for example `__game.go('cliff')`.
 
-**Tests** live in `tests/`: playthroughs of every stage and of the review for both projects by keyboard and by touch, a memory soak, a fuzz, saves from older versions, and a check of the numbers behind stages 3, 4 and 5. `node tests/run.js quick` takes about three minutes and runs on every push; `tests/README.md` has the rest.
+**Tests** live in `tests/`: playthroughs of every stage and of the review for both projects by keyboard and by touch, a memory soak, a fuzz, saves from older versions, and a check of the numbers behind stages 3, 4 and 5. `node tests/run.js quick` takes about four minutes and runs on every push; `tests/README.md` has the rest.
+
+## Play statistics
+
+The copy of the game at docs.nygen.io counts how it is played, so that we can see which stations people finish, where they give up, and what they would like next. It uses [PostHog](https://posthog.com), on its servers in the EU, in its cookieless mode.
+
+- **What is counted.** A visit. A project taken. A stage walked into. A station started, finished (with the seconds it took, the tries and the stars) or left unfinished. A step given to Tomo. A stage or a project finished. A code tab opened, the methods copied, the link to GitHub followed. A tick on the request sheet. Each goes with the project in hand, the number of stations done so far, the stars, and whether the screen is a touch screen. PostHog adds what a browser tells any site: its kind and version, the size of the screen, the language, the time zone, and the page that led here. From the network address of the request it works out a rough place, a country and a city, and that can be switched off in the project's settings.
+- **What is not.** The name typed at sign-in never leaves the page, and nothing typed anywhere else does. No cookie is set and nothing is kept in the browser for counting, so a visitor is counted for one day and cannot be followed after it, or from one site to another. There are no recordings of the screen. A browser that asks not to be tracked is not counted, and neither is one that blocks the counter: the game plays the same.
+- **Your own copy counts nothing.** The counter runs only on the sites listed in `js/engine/stats.js`. A fork, a copy in a folder and the test suite load nothing and send nothing. To count the players of your own copy, set `window.CYTESEEING_STATS = { key, host, sites }` in `index.html` before the scripts, with the token of your own PostHog project. The token in the file is public by design: it can send events and read nothing.
+- **The request sheet** at the request board and in arrivals lists a few tissues and kinds of data. A tick is one count, kept in the save so that it is counted once. Where nothing is counted, the board leads to the GitHub issues as it always did. The list is `G.REQUESTS` in `js/world/requests.js`.
 
 ## A note on the science
 

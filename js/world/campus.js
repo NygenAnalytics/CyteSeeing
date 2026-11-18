@@ -60,8 +60,9 @@ function walkTo(i) {
 }
 function goIn(n) {
   if (n.kind === 'board') {
-    ask = { text: 'REQUESTS: Missing a tissue, or a kind of project? Ask for it on GitHub, and it joins the queue.', opts: ['NOT NOW', 'OPEN GITHUB'], sel: 1,
-      pick: k => { ask = null; if (k === 1) { try { window.open(G.REPO + '/issues/new?title=' + encodeURIComponent('Request: a cell system or a scenario'), '_blank', 'noopener'); } catch (e) {} G.toast('IF NOTHING OPENED, THE LINK IS IN THE NOTEBOOK.', 4); } } };
+    /* the sheet, where a request is counted; where nothing is counted, the way to GitHub */
+    ask = G.requests.sheet('board', () => { ask = null; }) ||
+      { text: 'REQUESTS: Missing a tissue, or a kind of project? Ask for it on GitHub, and it joins the queue.', opts: ['NOT NOW', 'OPEN GITHUB'], sel: 1, pick: k => { ask = null; if (k === 1) G.requests.github(); } };
     G.sfx('blip'); return;
   }
   if (n.kind === 'bay') { G.sfx('door'); G.go('corridor', { floor: 'bay', from: 'lift' }); return; }
@@ -80,7 +81,7 @@ function goIn(n) {
 }
 
 G.scenes.campus = {
-  dbg: { nodes: () => nodes.map(n => ({ kind: n.kind, id: n.id, open: n.open, name: n.name, x: n.x, y: n.y })), at: () => at, busy: () => !!(talk || ask || way.length), to: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; },
+  dbg: { nodes: () => nodes.map(n => ({ kind: n.kind, id: n.id, open: n.open, name: n.name, x: n.x, y: n.y })), at: () => at, busy: () => !!(talk || ask || way.length), sheet: () => (ask && ask.dbg) || null, to: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; },
     enter: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; goIn(nodes[i]); }, clear: () => { talk = null; ask = null; } },
   enter(a) {
     if (!G.scenario()) { G.go('corridor', { floor: 'bay' }); nodes = []; way = []; at = 0; return; }
@@ -95,8 +96,11 @@ G.scenes.campus = {
   update(dt) {
     if (!nodes.length) return;
     if (ask) {
-      if (G.hit('left') || G.hit('right') || G.hit('up') || G.hit('down')) { ask.sel = 1 - ask.sel; G.sfx('tick'); }
-      if (G.hit('a')) ask.pick(ask.sel); else if (G.hit('b')) ask.pick(0);
+      if (ask.update) ask.update();
+      else {
+        if (G.hit('left') || G.hit('right') || G.hit('up') || G.hit('down')) { ask.sel = 1 - ask.sel; G.sfx('tick'); }
+        if (G.hit('a')) ask.pick(ask.sel); else if (G.hit('b')) ask.pick(0);
+      }
       return;
     }
     if (talk) { if (talk.update(dt) === 'done') { talk = null; const f = talkAfter; talkAfter = null; if (f) f(); } return; }
@@ -132,7 +136,8 @@ G.scenes.campus = {
     const sc = G.scenario(); R(5, 3, 3, 5, sc.col); T(sc.title, 12, 1, C.fog);
     G.star(VW - 44, 2, true); T(G.totalStars() + '/' + G.maxStars(), VW - 5, 1, C.amber, { a: 'right' });
     if (!talk && !ask && !way.length) prompt(nodes[at]);
-    if (ask) { G.caption(ask.text, 99, { top: true, noPrompt: true, border: C.amber }); ask.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: ask.sel === i, primary: i === 1 }) && ask) ask.pick(i); }); }
+    if (ask && ask.draw) ask.draw();
+    else if (ask) { G.caption(ask.text, 99, { top: true, noPrompt: true, border: C.amber }); ask.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: ask.sel === i, primary: i === 1 }) && ask) ask.pick(i); }); }
     if (talk) talk.draw();
   },
 };

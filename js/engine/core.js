@@ -80,8 +80,9 @@ const PROFILE_KEY = 'cyteseeing-profile-v1', OLD_FLOORS = { g: 'make', 2: 'map',
 const slotKey = id => (!id || id === 'response' ? SAVE_KEY : SAVE_KEY + ':' + id);
 /* `finished` is the record of the projects that have been through their review: { stars, max, lent }
    for each. It is kept here and not with a project's progress, so the arrivals bay can show it
-   whichever project is in hand. */
-G.profile = { name: '', scenario: null, sound: false, finished: {} };
+   whichever project is in hand. `asked` is what the player ticked on the request sheet (js/world/requests.js),
+   so that a tick stays and a request is counted once. */
+G.profile = { name: '', scenario: null, sound: false, finished: {}, asked: {} };
 function readSlot(id) {
   let st = fresh();
   if (id) try {
@@ -99,7 +100,7 @@ function readSlot(id) {
 G.loadSave = function () {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
-    if (p) { Object.assign(G.profile, p); if (!G.profile.finished) G.profile.finished = {}; }
+    if (p) { Object.assign(G.profile, p); if (!G.profile.finished) G.profile.finished = {}; if (!G.profile.asked) G.profile.asked = {}; }
     else {
       /* a save from before there were projects belongs to the first project */
       const old = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
@@ -114,15 +115,19 @@ G.save = function () {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(G.profile));
     if (G.profile.scenario) localStorage.setItem(slotKey(G.profile.scenario), JSON.stringify(G.state));
   } catch (e) {}
+  /* whoever watches progress (js/engine/stats.js) hears of every save */
+  if (G.onSave) G.onSave();
 };
 /* take up a project: its own progress, its own cells. What the last project worked out is dropped. */
 G.setScenario = function (id) {
-  if (G.profile.scenario) G.save();
+  const was = G.profile.scenario;
+  if (was) G.save();
   G.profile.scenario = id;
   G.state = readSlot(id);
   ['cloud', 'atlas', 'loads', 'trial', 'lineage'].forEach(k => { if (G[k] && G[k].reset) G[k].reset(); });
   G.sys = id && G.SCENARIOS[id] && G.systems ? G.systems[G.SCENARIOS[id].system] || null : null;
   G.save();
+  if (G.onProject) G.onProject(id, was);
 };
 G.scenario = () => (G.profile.scenario && G.SCENARIOS ? G.SCENARIOS[G.profile.scenario] : null);
 /* the stages of the current project that exist for its cells, in order */
@@ -130,7 +135,7 @@ G.route = () => { const sc = G.scenario(); return sc ? sc.route.filter(G.playabl
 G.resetSave = function () {
   const snd = G.profile.sound;
   try { Object.keys(G.SCENARIOS || {}).forEach(id => localStorage.removeItem(slotKey(id))); localStorage.removeItem(PROFILE_KEY); } catch (e) {}
-  G.profile = { name: '', scenario: null, sound: snd, finished: {} };
+  G.profile = { name: '', scenario: null, sound: snd, finished: {}, asked: {} };
   G.setScenario(null);
 };
 G.hasProgress = () => !!G.profile.scenario;
@@ -655,11 +660,13 @@ G.go = function (name, args) {
 };
 function swap() {
   if (cur && cur.leave) cur.leave();
+  const from = curName;
   curName = next.name; cur = G.scenes[curName];
   G.job = null; G.card.open = false;
   cur.enter(next.args || {});
   next = null;
   if (G.book) G.book.sync();
+  if (G.onScene) G.onScene(from, curName);
 }
 let last = 0;
 function frame(now) {
