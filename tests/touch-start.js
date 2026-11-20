@@ -1,4 +1,4 @@
-// the new start by touch on phones: sign in with the letter grid, take a parcel, walk the map, enter stage 1
+// the start by touch on phones: straight into arrivals, a name from the badge printer's letter grid, a parcel, the map, stage 1
 const { chromium, devices } = require('playwright');
 (async () => {
   const [,, indexPath, outDir] = process.argv;
@@ -18,7 +18,12 @@ const { chromium, devices } = require('playwright');
     const hall = (fn, a) => p.evaluate(([f, x]) => __game.scenes.corridor.dbg[f](x), [fn, a]);
     const camp = (fn, a) => p.evaluate(([f, x]) => __game.scenes.campus.dbg[f](x), [fn, a]);
     const shot = n => p.screenshot({ path: `${outDir}/${name}_${n}.png` });
-    await raw(160, 90); for (let i = 0; i < 20 && await scene() !== 'start'; i++) await wait(150); await wait(500);
+    await raw(160, 90); for (let i = 0; i < 30 && await scene() !== 'corridor'; i++) await wait(150); await wait(2200);
+    for (let i = 0; i < 20 && await hall('busy'); i++) { await raw(160, 150); await wait(120); }
+    console.log(name, 'straight into', await scene(), 'as', await p.evaluate(() => __game.you()));
+    // the badge printer by the lift: a tap walks there and brings up the letter grid
+    const printer = (await hall('items')).find(i => i[0] === 'badge')[1];
+    await raw(printer - await hall('cam'), 100); for (let i = 0; i < 30 && await scene() !== 'start'; i++) await wait(150); await wait(500);
     // the letter grid: 7 columns, 22 by 20 pixels, from (150, 58)
     const KEYS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').concat(['DEL', 'OK']);
     const letter = async k => { const i = KEYS.indexOf(k); await raw(150 + (i % 7) * 22 + 10, 58 + Math.floor(i / 7) * 20 + 9); };

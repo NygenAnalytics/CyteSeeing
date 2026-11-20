@@ -1,8 +1,8 @@
 // Play statistics (js/engine/stats.js) and the request sheet (js/world/requests.js).
 //   node tests/stats.js <http address of index.html> <out>      (the runner gives both)
 // 1  In a test nothing is fetched from PostHog and nothing is sent: events are only written down. A new player
-//    signs in, takes a project, ticks the request sheet, plays into a station: each is one event, with the
-//    project and the progress so far, and the name typed at sign-in is in none of them.
+//    prints a badge with a name, takes a project, ticks the request sheet, plays into a station: each is one event,
+//    with the project and the progress so far, and the name on the badge is in none of them.
 // 2  The sheet by taps, on a phone.
 // 3  The way events really leave: over http, with the counter switched on for this address and every request to
 //    PostHog caught before it leaves the machine. The real library is used where it is installed
@@ -32,12 +32,18 @@ const INDEX = path.resolve(__dirname, '..', 'index.html'), NAME = 'ZQXJWV';
     await p.addInitScript(() => { window.__opened = 0; window.open = () => { window.__opened++; return null; }; });
     await p.goto('file://' + INDEX + '?debug'); await t.wait(2600);
     console.log('in a test: counter', await p.evaluate(() => __game.track.state()), '| sheet offered', await p.evaluate(() => __game.track.on()), '| library on the page', await p.evaluate(() => typeof window.posthog));
-    await t.key('Space'); await t.wait(700); await p.keyboard.type(NAME, { delay: 60 }); await t.key('Enter'); await t.wait(4000); await t.settle();
+    await t.key('Space'); await t.wait(2800); await t.settle();
+    /* a name of one's own, from the badge printer by the lift */
+    await p.evaluate(() => { const d = __game.scenes.corridor.dbg; d.at(d.items().find(i => i[0] === 'badge')[1]); }); await t.wait(300); await t.key('Space'); await t.wait(900);
+    await p.keyboard.type(NAME, { delay: 60 }); await t.key('Enter'); await t.wait(2600); await t.settle();
     await p.evaluate(() => __game.scenes.corridor.dbg.at(226)); await t.wait(300); await t.key('Space'); await t.wait(400); await t.key('Space'); await t.wait(900);
     for (let i = 0; i < 8 && await p.evaluate(() => __game.scene()) !== 'campus'; i++) { await t.key('Space'); await t.wait(400); }
     await t.wait(900);
     console.log('signed in as', await p.evaluate(() => __game.you()), '| events so far:', (await t.names()).join(' '));
     console.log('game_start', JSON.stringify((await t.last('game_start')).props), '| project_chosen', JSON.stringify((await t.last('project_chosen')).props));
+    /* the first minute, step by step: Vera's first words, a badge printed by choice, a label read, a project taken */
+    const si = await t.last('badge_printed'), pr = await t.last('parcel_read'), order = (await t.names()).filter(n => ['game_start', 'badge_printed', 'arrivals_briefed', 'parcel_read', 'project_chosen'].indexOf(n) >= 0);
+    console.log('the first minute:', order.join(' > '), '| badge_printed', si ? JSON.stringify({ seconds: typeof si.props.seconds, named: si.props.named }) : 'MISSING', '| parcel_read', pr ? pr.props.parcel : 'MISSING');
 
     /* the request board on the map: the sheet, by keyboard */
     const nodes = await p.evaluate(() => __game.scenes.campus.dbg.nodes()), board = nodes.findIndex(n => n.kind === 'board'), make = nodes.findIndex(n => n.id === 'make');
@@ -136,7 +142,10 @@ const INDEX = path.resolve(__dirname, '..', 'index.html'), NAME = 'ZQXJWV';
     console.log('switched on: library', real ? 'real' : 'stand-in', '| counter', await p.evaluate(() => __game.track.state()), '| fetched', asked.filter(u => /array\.js/.test(u)).join(' ') || 'NOTHING');
     const cfg = await p.evaluate(() => { const c = (window.posthog && window.posthog.config) || {}; return { api_host: c.api_host, cookieless_mode: c.cookieless_mode, autocapture: c.autocapture, disable_session_recording: c.disable_session_recording, capture_pageview: c.capture_pageview, respect_dnt: c.respect_dnt }; });
     console.log('started with', JSON.stringify(cfg));
-    await t.key('Space'); await t.wait(700); await p.keyboard.type(NAME, { delay: 60 }); await t.key('Enter'); await t.wait(4000); await t.settle();
+    await t.key('Space'); await t.wait(2800); await t.settle();
+    /* a name of one's own, from the badge printer by the lift */
+    await p.evaluate(() => { const d = __game.scenes.corridor.dbg; d.at(d.items().find(i => i[0] === 'badge')[1]); }); await t.wait(300); await t.key('Space'); await t.wait(900);
+    await p.keyboard.type(NAME, { delay: 60 }); await t.key('Enter'); await t.wait(2600); await t.settle();
     await p.evaluate(() => __game.scenes.corridor.dbg.at(226)); await t.wait(300); await t.key('Space'); await t.wait(400); await t.key('Space'); await t.wait(900);
     for (let i = 0; i < 8 && await p.evaluate(() => __game.scene()) !== 'campus'; i++) { await t.key('Space'); await t.wait(400); }
     await t.wait(4500);   // the library sends in batches

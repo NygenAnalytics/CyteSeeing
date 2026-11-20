@@ -59,7 +59,7 @@ G.scenes.title = {
     matrix.forEach(m => { m.flash = Math.max(0, m.flash - dt * 1.6); });
     /* counts decay back to zero now and then, so the matrix stays sparse */
     if (rnd() < dt * 9) { const m = matrix[Math.floor(rnd() * matrix.length)]; if (m.v > 0) m.v--; }
-    if (G.t - t0 > 0.4 && (G.hit('a') || G.ptr.pressed)) { G.sfx('ok'); G.go(G.scenario() ? 'corridor' : G.profile.name ? 'corridor' : 'start', G.scenario() ? {} : { floor: 'bay' }); }
+    if (G.t - t0 > 0.4 && (G.hit('a') || G.ptr.pressed)) { G.sfx('ok'); G.go('corridor', G.scenario() ? {} : { floor: 'bay' }); }
   },
   draw() {
     const bands = ['#0b1226', '#0d1630', '#101b3a', '#132045', '#16254f'];

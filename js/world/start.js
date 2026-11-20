@@ -1,4 +1,5 @@
-/* Signing in: the player's name goes on a badge, and the characters use it from then on.
+/* The badge printer in arrivals: the player's name goes on a badge, and the characters use it from
+   then on. Nobody has to come here: a player who never does is called Ari.
    Letters can be typed, or picked from the grid with the arrow keys or a finger. */
 (function () {
 'use strict';
@@ -32,7 +33,7 @@ G.scenes.start = {
   enter() {
     name = G.profile.name || ''; cur = 0; t0 = G.t; out = 0; G.rawKey = typed;
     G.book.show({
-      floor: 'The gate', room: 'Sign in', aim: 'Put a name on your badge.',
+      floor: 'Arrivals', room: 'Your badge', aim: 'Put a name on your badge.',
       goals: [{ id: 'n', text: 'Type a name, or leave it empty to be called Ari' }],
       notes: [{ id: 'g-why', open: true, html: 'The people you meet will use this name. It is kept in this browser and nowhere else.' }],
       term: null,
@@ -40,7 +41,7 @@ G.scenes.start = {
   },
   leave() { G.rawKey = null; },
   update() {
-    if (out) { if (G.t - out > 0.9) G.go('corridor', { floor: 'bay' }); return; }
+    if (out) { if (G.t - out > 0.9) G.go('corridor', { floor: 'bay', from: 'badge' }); return; }
     const n = KEYS.length;
     if (G.hit('right')) { cur = (cur + 1) % n; G.sfx('tick'); }
     if (G.hit('left')) { cur = (cur + n - 1) % n; G.sfx('tick'); }
@@ -51,8 +52,8 @@ G.scenes.start = {
   },
   draw() {
     R(0, 0, VW, VH, '#0b1022');
-    R(0, 0, VW, 11, 'rgba(8,12,26,.92)'); T('THE GATE', 5, 1, C.amber);
-    T('SIGN IN', GX, 22, C.white, { f: 'lg' }); T(G.kt('TYPE A NAME, THEN ENTER', 'TAP THE LETTERS, THEN OK'), GX, 42, C.steel);
+    R(0, 0, VW, 11, 'rgba(8,12,26,.92)'); T('ARRIVALS', 5, 1, C.amber);
+    T('YOUR BADGE', GX, 22, C.white, { f: 'lg' }); T(G.kt('TYPE A NAME, THEN ENTER', 'TAP THE LETTERS, THEN OK'), GX, 42, C.steel);
     /* the badge: a face, a name, a job */
     const bx = 24, by = 34 - (out ? Math.round(Math.min(1, (G.t - out) * 3) * 6) : 0);
     R(bx + 3, by + 3, 104, 112, 'rgba(0,0,0,.45)'); R(bx, by, 104, 112, C.paper); R(bx, by, 104, 18, C.teal); T('VISITOR', bx + 52, by + 5, C.white, { a: 'center', f: 'smb' });
@@ -62,7 +63,7 @@ G.scenes.start = {
     T(shown, bx + 52, by + 74, name ? C.ink : '#a8a294', { a: 'center', f: 'lg' });
     if (blink && name.length < MAX) R(bx + 52 + Math.ceil(G.tw(shown, 'lg') / 2) + 2, by + 76, 2, 11, name ? C.ink : '#a8a294');
     T('POSTDOC', bx + 52, by + 96, '#6b6456', { a: 'center' });
-    if (out) { T('WELCOME', GX + 76, 100, C.mint, { a: 'center', f: 'lg' }); return; }
+    if (out) { T('PRINTED', GX + 76, 100, C.mint, { a: 'center', f: 'lg' }); return; }
     KEYS.forEach((k, i) => {
       const x = GX + (i % COLSN) * CW, y = GY + Math.floor(i / COLSN) * CH, on = i === cur, wide = k.length > 1;
       G.panel(x, y, CW - 2, CH - 2, { border: on ? C.cyan : C.slate, fill: k === 'OK' ? C.teal : on ? '#17224a' : C.night });

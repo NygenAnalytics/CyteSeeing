@@ -10,6 +10,8 @@ const VERA = { skin: C.skin2, hair: '#3a2f3a', style: 'long', coat: '#7a2f45', s
 
 const ITEMS = [
   { id: 'lift', kind: 'lift', x: 44, label: 'GO OUT' },
+  /* nobody is asked for a name: the printer is there for whoever wants one on their badge */
+  { id: 'badge', kind: 'badge', x: 86, label: 'PRINT A BADGE' },
   { id: 'vera', kind: 'npc', x: 132, label: 'TALK' },
   { id: 'response', kind: 'parcel', x: 226, label: 'READ THE LABEL' },
   { id: 'cortex', kind: 'parcel', x: 300, label: 'READ THE LABEL' },
@@ -18,9 +20,9 @@ const ITEMS = [
   { id: 'slip', kind: 'prop', x: 512, label: 'READ' },
 ];
 const LINES = {
+  /* one box, and then the parcels: the first thing to do comes before anything else is said */
   veraIntro: [
-    () => 'VERA: ' + G.you() + '? Good. I am Vera. I run this group, which means you will be doing the work.',
-    'VERA: Two parcels came in this morning. Each one is a project. Read the labels and take one.',
+    () => 'VERA: ' + G.you() + '? Good. I am Vera, and I run this group. Two parcels came in today. Read the labels and take one.',
   ],
   crates: [
     'CRATES: More tissues, still frozen. Lung, gut, a tumour. The delivery note says they will be unpacked soon.',
@@ -42,10 +44,9 @@ const vera = () => {
 function take(id, api) {
   const sc = G.SCENARIOS[id];
   G.load(['systems/' + sc.system + '.js']).then(() => {
-    const first = !G.profile.scenario;
     G.setScenario(id); G.state.floor = 'bay'; G.save(); G.sfx('star');
     api.refresh();
-    api.say(sc.brief.concat(first ? ['VERA: The road outside goes past every stage of the project. The core facility is first.'] : []), () => G.go('campus', { from: 'bay' }));
+    api.say(sc.brief, () => G.go('campus', { from: 'bay' }));
   }, () => G.toast('THAT DID NOT LOAD. CHECK THE CONNECTION AND TRY AGAIN.', 5));
 }
 /* what happens when the player uses something that only this hall has */
@@ -54,10 +55,12 @@ function use(it, api) {
     const sc = G.SCENARIOS[it.id];
     G.sfx('blip');
     if (G.profile.scenario === it.id) { api.say(['LABEL: ' + sc.label + ' This one is yours.' + (G.finished(it.id) ? ' It has been reviewed.' : '')], null); return true; }
+    G.track('parcel_read', { parcel: it.id });
     api.ask('LABEL: ' + sc.label, ['PUT IT BACK', 'TAKE THIS PROJECT'], k => { if (k === 1) take(it.id, api); }, 1);
     return true;
   }
   if (it.id === 'vera') { api.say(vera()); return true; }
+  if (it.id === 'badge') { G.sfx('blip'); G.go('start', {}); return true; }
   if (it.id === 'slip') {
     G.sfx('blip');
     /* the sheet, where a request is counted; where nothing is counted, the way to GitHub */
@@ -95,6 +98,16 @@ function draw(it, x, o) {
       /* a clipboard, and a pallet truck she is not going to move herself */
       R(x + 14, 122, 22, 3, '#c0504a'); R(x + 33, 106, 2, 18, '#c0504a'); R(x + 30, 104, 8, 3, C.ink); G.disc(x + 17, 128, 3, C.ink); G.disc(x + 31, 128, 3, C.ink);
       return true;
+    case 'badge': {
+      /* a printer on the wall, with the badge it last made hanging from its slot: the name on it is the player's */
+      const name = G.you(), w = Math.max(30, Math.ceil(G.tw(name, 'sm')) + 8);
+      R(x - 11, 84, 22, 20, '#16101c'); R(x - 10, 85, 20, 18, '#4a525e'); R(x - 10, 85, 20, 1, 'rgba(255,255,255,.3)'); R(x - 7, 88, 9, 5, '#0c1016'); R(x - 6, 89, 5, 1, C.mint);
+      R(x + 5, 88, 2, 2, Math.floor(t * 2) % 2 ? C.amber : '#6b5a2a'); R(x - 7, 99, 14, 2, '#0c1016');
+      R(x - 1, 101, 2, 4, '#8f8a7c');
+      R(x - w / 2, 105, w, 16, '#16101c'); R(x - w / 2 + 1, 106, w - 2, 14, C.paper); R(x - w / 2 + 1, 106, w - 2, 4, C.teal);
+      T(name, x, 111, C.ink, { a: 'center' });
+      return true;
+    }
     case 'response': case 'cortex': parcel(it, x, G.profile.scenario === it.id, t); return true;
     case 'crates': {
       const sh = since('crates') < 0.6 ? Math.round(Math.sin(t * 40)) : 0;
@@ -146,8 +159,8 @@ function book(found, total) {
 
 G.kits = G.kits || {};
 G.kits.bay = { ITEMS, LINES, W, draw, room, use, book, line: () => null,
-  /* the first time in, the player walks in from the left and Vera has something to say */
-  arrive: () => (G.profile.metVera ? null : { walk: 96, say: LINES.veraIntro, then: () => { G.profile.metVera = true; G.save(); } }),
+  /* the first time in, the player walks in from the left, past the badge printer, and Vera has something to say */
+  arrive: () => (G.profile.metVera ? null : { walk: 110, say: LINES.veraIntro, then: () => { G.profile.metVera = true; G.save(); G.track('arrivals_briefed'); } }),
   /* where the arrow points: at a parcel until one is taken, then at the way out */
   next: () => (G.scenario() ? 'lift' : 'response'),
   paint: ['#0c1016', '#3a4250', '#59616e', '#2a303a', '#0c1016', '#1a1e26', '#2a303a', '#141820'] };

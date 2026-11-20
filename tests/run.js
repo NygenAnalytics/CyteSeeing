@@ -23,6 +23,7 @@ const QUICK = [
      by touch, and the way events really leave, with every request to PostHog caught before it goes */
   T('stats', 'stats.js', { url: true, limit: 240, not: [/MISSING/], want: [/in a test: counter off \| sheet offered true \| library on the page undefined/,
     /ticked by keyboard: tumour \(tissue, from board\); bone marrow \(tissue, from board\); chromatin \(data, from board\) \| a second press on a ticked row counted again: false/,
+    /the first minute: game_start > arrivals_briefed > badge_printed > parcel_read > project_chosen \| badge_printed \{"seconds":"number","named":true\} \| parcel_read response/,
     /station_finished x1 .*"first":true,"tries":3/, /left after finishing: station_left sent false/, /tomo_asked 2 \| counted as finished by the player: false/, /stage_finished x1 /,
     /another parcel: project_chosen \| from response/, /every one carries project, rooms_done, stars, touch, game_version: true/,
     /the name in any event: false \| requests to PostHog: 0 \| cookies: 0 \| kept in the browser beside the save: nothing/,
@@ -31,6 +32,11 @@ const QUICK = [
     /game events that left: game_start project_chosen \| who they say it is: (\$posthog_cookieless|stand-in)$/m,
     /cookies set: 0 \| kept in the browser beside the save: nothing \| the name in anything sent: false \| other scripts fetched from PostHog: 0/, /the page says that it counts: true$/m,
     /no key: sheet offered false \| the board asks the question about GitHub \| windows opened 1 \| request events 0 \| the page says that it counts: false/] }),
+  /* an upright phone with the game turned on its side: the size, the pads, where a tap lands, and the way back */
+  T('turn', 'turn.js', { limit: 200, not: [/turned false \| screen \d+ x \d+ \(/, /label up false/, /inside the window false/, /page scrolls true/],
+    want: [/iphone turned true \| screen 533 x 300 .* pads at both ends, 48 px across \| pads inside the window true/, /pixel turned true \| screen 610 x 343 .* pads at both ends, 64 px across/,
+      /iphone a tap on TAKE THIS PROJECT: response \| scene campus/, /pixel pad, right arrow: on the map from plot 1 to 2/,
+      /iphone phone turned for real: turned false screen 533 x 300 \| upright again: turned true screen 533 x 300/, /pixel UPRIGHT: turned false \| screen 366 x 206 \| kept in the profile false \| events true,false/] }),
   /* and a save of version 8, with five stages done and nothing in it about the ending */
 ].concat(both('oldsave-v8', 'oldsave.js', { args: ['v8'], want: [/loaded \{"rooms":32,"close":\{"done":false,"stars":0\},"tries":0,"review":null,"finished":\{\},"stars":"50\/81"/, /soon:\S+( \S+)* stage:gallery$/m,
   /gallery frames 26 complete true/, /settled 1 lectern: VERA: The floor comes first\. 1 of the 5/, /saved \{"droplets":\{"done":true,"stars":2\},"hvg":\{"done":true,"stars":0,"by":"student"\},"close":\{"done":false,"stars":0\}/] }));

@@ -109,14 +109,15 @@ const LINES = {
     'ROBOT: PCR bumps into your shoe, apologises in beeps, and resumes amplification.',
     "ROBOT: Somebody has stuck a label on it: 'NO TEMPLATE CONTROL'.",
   ],
+  /* one box, and then the first station: what else Mika has to say waits until she is asked */
   intro: [
-    () => 'MIKA: You must be ' + G.you() + '. I am Mika, and I run the core facility. The coffee is bad and the freezers are full.',
-    'MIKA: Your sample is dissociated and waiting. Bay 1-1 is free, so go and load the chip.',
-    'MIKA: One warning. Whatever you do in a room follows you down this corridor. Like a reputation.',
+    () => 'MIKA: You must be ' + G.you() + '. I am Mika. Your sample is dissociated and waiting. Bay 1-1 is free, so go and load the chip.',
   ],
   /* what Mika says depends on how many rooms are done, the review included */
   mika: [
-    ['MIKA: Bay 1-1 is the first door on your right. The cells will not load themselves. I have asked.'],
+    ['MIKA: I run the core facility. The coffee is bad and the freezers are full.',
+      'MIKA: Bay 1-1 is the first door on your right. The cells will not load themselves. I have asked.',
+      'MIKA: One warning. Whatever you do in a room follows you down this corridor. Like a reputation.'],
     ['MIKA: Good run. The sequencer has finished with your library too. It only complained twice.',
       'MIKA: Next is the Cliff. There are far more barcodes than cells. Work out which ones are real.'],
     ['MIKA: Cells called. Room 1-3 is quality control. Not every called cell is a healthy cell.',

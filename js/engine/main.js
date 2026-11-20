@@ -3,9 +3,17 @@
 'use strict';
 const cv = G.cv, stage = document.getElementById('stage');
 
+/* On an upright phone the screen is a strip a third of the way down the page. G.turn(true) lays the game along the
+   long side of the phone instead, at about twice the size, with a thumb pad at each end: the player turns the phone,
+   and the page does not have to. It lasts while the phone stays upright; held sideways, the page lays itself out that
+   way, as it always did. The choice is kept in the profile. */
+let turned = false;
+const root = document.documentElement;
 function fit() {
   const mq = q => window.matchMedia(q).matches;
   const touch = mq('(hover: none), (pointer: coarse)');
+  const turn = !!(G.profile && G.profile.turned) && touch && window.innerHeight > window.innerWidth && !document.fullscreenElement;
+  if (turn !== turned) { turned = G.turned = turn; root.classList.toggle('turned', turn); }
   const sideways = mq('(pointer: coarse) and (orientation: landscape) and (max-height: 520px)');
   const full = document.fullscreenElement === stage;
   const lay = stage.parentElement.clientWidth, one = sideways || mq('(max-width: 900px)');
@@ -13,7 +21,14 @@ function fit() {
      sideways, the full width on a phone held upright, and beside the notebook on a desktop */
   const fs = getComputedStyle(cv.parentElement), edge = 2 * (parseFloat(fs.paddingLeft) + parseFloat(fs.borderLeftWidth));
   let w, h;
-  if (full) { w = window.innerWidth - 16 - edge; h = window.innerHeight - 16 - edge; }
+  /* turned: the stage is as wide as the window is tall. Room is kept for a pad at each end, unless that costs the screen too much */
+  const long = window.innerHeight - 12, PADS = 2 * (48 + 8);
+  if (turned) {
+    root.style.setProperty('--turn-w', window.innerHeight + 'px'); root.style.setProperty('--turn-h', window.innerWidth + 'px');
+    h = window.innerWidth - 12 - edge; w = long - edge - PADS;
+    if (w < h * G.VW / G.VH * 0.75) w = long - edge;
+  }
+  else if (full) { w = window.innerWidth - 16 - edge; h = window.innerHeight - 16 - edge; }
   else if (sideways) { w = lay - edge; h = window.innerHeight - 6 - edge; }
   else { w = (one ? lay : lay - 18 - 320) - edge; h = touch ? 1e6 : window.innerHeight - 120; }
   /* one game pixel covers a whole number of screen pixels, whatever the display's pixel ratio */
@@ -28,8 +43,18 @@ function fit() {
   }
   cv.style.width = css + 'px';
   /* thumb pads only when there is room beside the screen */
-  stage.classList.toggle('no-side', sideways && (lay - (css + edge)) / 2 < 76);
+  if (turned) {
+    const spare = Math.floor((long - (css + edge)) / 2 - 8);
+    stage.classList.toggle('no-side', spare < 44); root.style.setProperty('--side', Math.max(44, Math.min(64, spare)) + 'px');
+  } else stage.classList.toggle('no-side', sideways && (lay - (css + edge)) / 2 < 76);
 }
+G.turn = function (on) {
+  G.profile.turned = !!on; G.save();
+  if (G.track) G.track('screen_turned', { on: !!on });
+  fit(); window.scrollTo(0, 0); cv.focus({ preventScroll: true });
+};
+document.getElementById('btn-turn').addEventListener('click', () => G.turn(true));
+document.getElementById('btn-unturn').addEventListener('click', () => G.turn(false));
 window.addEventListener('resize', fit);
 document.addEventListener('fullscreenchange', fit);
 fit();

@@ -15,10 +15,9 @@ const { chromium } = require('playwright');
   const scene = () => p.evaluate(() => __game.scene());
   await p.goto(url + '?debug', { waitUntil: 'load', timeout: 60000 }); await wait(2000);
   const boot = js.length; console.log('boot scripts', boot, '| title scene:', await scene());
-  await key('Space'); await wait(900); console.log('after start:', await scene());
-  await key('Enter'); await wait(4500);
+  await key('Space'); await wait(3500); console.log('after start:', await scene());
   for (let i = 0; i < 12 && await p.evaluate(() => __game.scenes.corridor.dbg.busy()); i++) { await key('Space'); await wait(260); }
-  console.log('signed in as', await p.evaluate(() => __game.you()), '| scene', await scene(), '| stage', await p.evaluate(() => __game.state.floor));
+  console.log('playing as', await p.evaluate(() => __game.you()), '| scene', await scene(), '| stage', await p.evaluate(() => __game.state.floor));
   await p.evaluate(() => __game.scenes.corridor.dbg.at(300)); await wait(300); await key('Space'); await wait(500); await key('Space'); await wait(1200);
   for (let i = 0; i < 10 && await scene() !== 'campus'; i++) { await key('Space'); await wait(450); }
   console.log('project', await p.evaluate(() => __game.profile.scenario), '| scene', await scene(), '| system', await p.evaluate(() => __game.sys && __game.sys.id));

@@ -98,6 +98,29 @@ body {
   .stage.no-side { grid-template-columns: minmax(0, 1fr); }
   .stage.no-side .side { display: none; }
 }
+/* An upright phone with the game turned on its side (G.turn in js/engine/main.js). The stage lies along the long side of
+   the screen and is laid out as on a phone held sideways: the player turns the phone, and the page stays as it is.
+   --turn-w and --turn-h are the stage's own width and height, which are the height and the width of the window. */
+.turnbtn, .unturn { display: none; }
+.turnbtn { width: 100%; max-width: 420px; padding: 13px 9px; font-size: 13px; color: var(--cyan); border-color: var(--cyan); }
+@media (pointer: coarse) and (orientation: portrait) { .turnbtn { display: block; } }
+html.turned, html.turned body { overflow: hidden; }
+html.turned .stage {
+  position: fixed; z-index: 20; top: 0; left: 0; width: var(--turn-w); height: var(--turn-h); box-sizing: border-box;
+  transform-origin: 0 0; transform: translateX(var(--turn-h)) rotate(90deg);
+  background: var(--bg); padding: 6px; gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; align-content: center;
+}
+html.turned .pad, html.turned .turn, html.turned .turnbtn, html.turned .keys { display: none; }
+html.turned .side { display: flex; flex-direction: column; gap: 8px; width: var(--side, 56px); }
+html.turned .side-l { justify-self: end; }
+html.turned .side-r { justify-self: start; }
+html.turned .side button { width: var(--side, 56px); height: 40px; }
+html.turned .side .big { height: 84px; }
+html.turned .side .act { height: 64px; }
+html.turned .stage.no-side { grid-template-columns: minmax(0, 1fr); }
+html.turned .stage.no-side .side { display: none; }
+html.turned .unturn { display: block; position: absolute; top: 6px; left: 6px; z-index: 1; }
 
 .book { display: grid; gap: 14px; min-width: 0; max-width: 560px; }
 .book.code-first #card-term { order: -1; }
@@ -191,6 +214,8 @@ span.p { display: inline-block; height: auto; }
         <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
         <button type="button" class="big" data-key="right" aria-label="Walk right">&#9654;</button>
       </div>
+      <button class="chip turnbtn" id="btn-turn" type="button">Play sideways: a bigger screen</button>
+      <button class="chip unturn" id="btn-unturn" type="button">&#10005; Upright</button>
       <div class="pad" aria-label="Touch controls">
         <div>
           <button type="button" data-key="left" aria-label="Walk left">&#9664;</button>
@@ -202,7 +227,7 @@ span.p { display: inline-block; height: auto; }
         </div>
         <button type="button" class="act" data-key="a" aria-label="Action">ACT</button>
       </div>
-      <p class="turn">Tap things to walk to them and poke them. Turn your phone sideways for a bigger screen.</p>
+      <p class="turn">Tap things to walk to them and poke them.</p>
       <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> walk and adjust · <kbd>Space</kbd> act · <kbd>&uarr;</kbd> <kbd>&darr;</kbd> pick a control · <kbd>Esc</kbd> leave a room · <kbd>G</kbd> the goal · <kbd>L</kbd> floors · <kbd>M</kbd> sound</p>
     </div>
 

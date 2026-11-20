@@ -1,6 +1,6 @@
 /* Play statistics: which stations are played, for how long, and how far people get. They go to
    PostHog without a cookie, without anything kept in the browser, and without anything that says
-   who the player is: the name typed at sign-in never leaves the page (README: Play statistics).
+   who the player is: the name on the badge never leaves the page (README: Play statistics).
 
    Nothing is loaded and nothing is sent unless the page is served from one of the sites listed in
    `sites`. A fork, a copy in a local folder, the preview and the test suite count nothing. A
@@ -95,7 +95,7 @@ const roomsOf = id => { const st = G.STAGES[id]; return (st.rooms || []).concat(
 const copy = rooms => { const out = {}; for (const k in rooms) out[k] = { done: !!rooms[k].done, stars: rooms[k].stars || 0, by: rooms[k].by || null }; return out; };
 const full = (rooms, id) => roomsOf(id).every(r => rooms[r] && rooms[r].done);
 
-let started = false, floor = null, visit = null, snapKey, snap = {};
+let started = false, floor = null, visit = null, signin = 0, snapKey, snap = {};
 function resnap() { snapKey = (G.profile && G.profile.scenario) || null; snap = copy((G.state && G.state.rooms) || {}); }
 
 /* a scene has changed: the start of a visit, a station entered or left, a stage walked into */
@@ -103,6 +103,9 @@ G.onScene = function (from, to) {
   try {
     if (snapKey === undefined) resnap();
     if (!started && from === 'title') { started = true; G.track('game_start', { returning: !!(G.hasProgress && G.hasProgress()) }); }
+    /* the badge printer in arrivals: how long it took, and whether a name was typed (never the name itself) */
+    if (to === 'start') signin = now();
+    if (from === 'start') G.track('badge_printed', { seconds: signin ? secs(signin) : null, named: !!(G.profile.name && G.profile.name !== 'ARI') });
     if (visit && from === visit.room) {
       /* again: the station was already done, so leaving it is not giving up */
       if (!visit.done) G.track('station_left', { room: visit.room, stage: stageOf(visit.room), seconds: secs(visit.t0), again: visit.again });

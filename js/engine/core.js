@@ -81,7 +81,8 @@ const slotKey = id => (!id || id === 'response' ? SAVE_KEY : SAVE_KEY + ':' + id
 /* `finished` is the record of the projects that have been through their review: { stars, max, lent }
    for each. It is kept here and not with a project's progress, so the arrivals bay can show it
    whichever project is in hand. `asked` is what the player ticked on the request sheet (js/world/requests.js),
-   so that a tick stays and a request is counted once. */
+   so that a tick stays and a request is counted once. `turned`: on an upright phone, the game is played turned on
+   its side (main.js). */
 G.profile = { name: '', scenario: null, sound: false, finished: {}, asked: {} };
 function readSlot(id) {
   let st = fresh();
@@ -133,9 +134,9 @@ G.scenario = () => (G.profile.scenario && G.SCENARIOS ? G.SCENARIOS[G.profile.sc
 /* the stages of the current project that exist for its cells, in order */
 G.route = () => { const sc = G.scenario(); return sc ? sc.route.filter(G.playable) : []; };
 G.resetSave = function () {
-  const snd = G.profile.sound;
+  const snd = G.profile.sound, turned = !!G.profile.turned;
   try { Object.keys(G.SCENARIOS || {}).forEach(id => localStorage.removeItem(slotKey(id))); localStorage.removeItem(PROFILE_KEY); } catch (e) {}
-  G.profile = { name: '', scenario: null, sound: snd, finished: {}, asked: {} };
+  G.profile = { name: '', scenario: null, sound: snd, finished: {}, asked: {}, turned };
   G.setScenario(null);
 };
 G.hasProgress = () => !!G.profile.scenario;
@@ -296,7 +297,7 @@ const down = G.down = {}, hit = {}, held = {};
 const isField = el => el && el !== cv && /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(el.tagName);
 window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || isField(e.target)) return;
-  /* a scene that takes typing (signing in) gets the key first */
+  /* a scene that takes typing (the badge printer) gets the key first */
   if (G.rawKey && G.rawKey(e)) { e.preventDefault(); return; }
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (key === 'm') { G.toggleSound(); return; }
@@ -325,6 +326,9 @@ G.rep = k => !!hit[k] || (down[k] && held[k] > 0.32 && held[k + '_r']);
 const ptr = G.ptr = { x: -1, y: -1, down: false, pressed: false, released: false };
 function ptrPos(e) {
   const r = cv.getBoundingClientRect();
+  /* turned on its side on an upright phone (G.turned, main.js): the screen's left-to-right runs down the page,
+     and its top edge is the right edge of the page */
+  if (G.turned) { ptr.x = (e.clientY - r.top) * VW / r.height; ptr.y = (r.right - e.clientX) * VH / r.width; return; }
   ptr.x = (e.clientX - r.left) * VW / r.width;
   ptr.y = (e.clientY - r.top) * VH / r.height;
 }
