@@ -95,8 +95,8 @@ const roomsOf = id => { const st = G.STAGES[id]; return (st.rooms || []).concat(
 const copy = rooms => { const out = {}; for (const k in rooms) out[k] = { done: !!rooms[k].done, stars: rooms[k].stars || 0, by: rooms[k].by || null }; return out; };
 const full = (rooms, id) => roomsOf(id).every(r => rooms[r] && rooms[r].done);
 
-let started = false, floor = null, visit = null, signin = 0, snapKey, snap = {};
-function resnap() { snapKey = (G.profile && G.profile.scenario) || null; snap = copy((G.state && G.state.rooms) || {}); }
+let started = false, floor = null, visit = null, signin = 0, snapKey, snap = {}, tried = {};
+function resnap() { snapKey = (G.profile && G.profile.scenario) || null; snap = copy((G.state && G.state.rooms) || {}); tried = Object.assign({}, (G.state && G.state.tries) || {}); }
 
 /* a scene has changed: the start of a visit, a station entered or left, a stage walked into */
 G.onScene = function (from, to) {
@@ -129,6 +129,9 @@ G.onSave = function () {
   try {
     const key = (G.profile && G.profile.scenario) || null, s = G.state || {}, rooms = s.rooms || {};
     if (key !== snapKey || !key) { resnap(); return; }
+    /* an attempt at a station (a run, an answer given): how many it takes, and where people stop trying */
+    const tries = s.tries || {};
+    for (const r in tries) if (tries[r] > (tried[r] || 0)) { G.track('station_try', { room: r, stage: stageOf(r), tries: tries[r], seconds: visit && visit.room === r ? secs(visit.t0) : null }); tried[r] = tries[r]; }
     let lent = 0; const touched = {};
     for (const r in rooms) {
       const b = rooms[r], a = snap[r] || {};

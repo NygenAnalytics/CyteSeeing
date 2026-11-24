@@ -24,7 +24,7 @@ const QUICK = [
   T('stats', 'stats.js', { url: true, limit: 240, not: [/MISSING/], want: [/in a test: counter off \| sheet offered true \| library on the page undefined/,
     /ticked by keyboard: tumour \(tissue, from board\); bone marrow \(tissue, from board\); chromatin \(data, from board\) \| a second press on a ticked row counted again: false/,
     /the first minute: game_start > arrivals_briefed > badge_printed > parcel_read > project_chosen \| badge_printed \{"seconds":"number","named":true\} \| parcel_read response/,
-    /station_finished x1 .*"first":true,"tries":3/, /left after finishing: station_left sent false/, /tomo_asked 2 \| counted as finished by the player: false/, /stage_finished x1 /,
+    /station_finished x1 .*"first":true,"tries":3/, /station_try x1 \{"room":"droplets","stage":"make","tries":3,"seconds":"number"\}/, /left after finishing: station_left sent false/, /tomo_asked 2 \| counted as finished by the player: false/, /stage_finished x1 /,
     /another parcel: project_chosen \| from response/, /every one carries project, rooms_done, stars, touch, game_version: true/,
     /the name in any event: false \| requests to PostHog: 0 \| cookies: 0 \| kept in the browser beside the save: nothing/,
     /phone: ticked by taps: gut \(from arrivals, touch true\); spatial \(from arrivals, touch true\)/, /phone: DONE by tap puts it away: true \| the slip counts as found: true/,

@@ -70,7 +70,8 @@ const INDEX = path.resolve(__dirname, '..', 'index.html'), NAME = 'ZQXJWV';
     await p.evaluate(() => { const G = __game; G.state.rooms.droplets = { done: true, stars: 2 }; G.state.tries.droplets = 3; G.save(); G.save(); });
     const fin = (await t.log()).filter(e => e.name === 'station_finished');
     console.log('station_finished x' + fin.length, JSON.stringify((({ room, stage, stars, first, tries, seconds }) => ({ room, stage, stars, first, tries, seconds: typeof seconds }))(fin[0].props)), '| rooms_done with it', fin[0].props.rooms_done);
-    /* the code tabs of the station, and the Copy button under the methods */
+    const tr = (await t.log()).filter(e => e.name === 'station_try');
+    console.log('station_try x' + tr.length, JSON.stringify((({ room, stage, tries, seconds }) => ({ room, stage, tries, seconds: typeof seconds }))((tr[0] || { props: {} }).props)));
     await p.evaluate(() => __game.go('corridor', { from: 'droplets' })); await t.wait(1500); await t.settle();
     console.log('left after finishing: station_left sent', (await t.names()).indexOf('station_left') >= 0);
     await p.evaluate(() => __game.go('cliff', {})); await t.wait(2000);

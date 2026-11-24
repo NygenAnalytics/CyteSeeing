@@ -8,13 +8,11 @@ const { R, T, C, VW, VH } = G;
 const GOAL_CELLS = 8000, GOAL_RATE = 0.04;
 const JX = 126, CY = 62, EXIT_X = 236, TUBE_X = 250;
 
-/* Mika's walk through the chip. The animation on screen follows the step: see stream(). */
+/* Mika's walk through the chip, in three boxes. The animation on screen follows the step: see stream(). */
 const BEATS = [
-  { say: 'Your tissue is now single cells. They flow into the chip from the left, one after another.' },
-  { say: 'Gel beads come in from the top. Every bead carries its own barcode.' },
-  { say: 'Oil pinches the stream into droplets. One bead and one cell in a droplet: all of that cell\'s RNA gets the same barcode.' },
-  { say: 'Most droplets get no cell. A few get two. Those are doublets: two cells sharing one barcode.' },
-  { spot: [0, 111, VW, 69], say: 'Collect 8,000 single cells, with 4% doublets or fewer. Set the cells per lane and the number of lanes. Then press RUN.' },
+  { say: 'Your cells flow into the chip from the left, one by one. Gel beads come in from the top, each with its own barcode.' },
+  { say: 'Oil pinches the stream into droplets. One cell with one bead gets one barcode. Two cells in one droplet is a doublet.' },
+  { spot: [0, 111, VW, 69], say: 'Collect 8,000 single cells, with 4% doublets or fewer. Set the cells per lane and the number of lanes, then press RUN.' },
 ];
 
 const POKE = [
@@ -25,7 +23,7 @@ const POKE = [
   { r: [238, 40, 24, 68], say: ['TUBE: DO NOT DROP. NO, SERIOUSLY.', 'TUBE: A WEEK OF WORK IN 100 MICROLITRES.'] },
 ];
 let pokeN = 0;
-let phase, beats, now, R_, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, forecast, rsel, dblSeen, say;
+let phase, beats, now, R_, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, rsel, dblSeen, say;
 
 function compute(r, n) {
   const d = 0.008 * r / 1000, dbl = Math.round(r * d), lam = 2 * d;
@@ -42,18 +40,19 @@ function judge(o) {
 function stream() {
   if (phase === 'intro') {
     const i = beats.i;
-    return { P: 0.62, travel: 2.6, lam: i === 3 ? 0.5 : 0.38, beads: i >= 1, rings: i >= 2, maxK: i === 3 ? 2 : 1, force: i === 3 ? 5 : 0, mark: i === 3 };
+    return { P: 0.62, travel: 2.6, lam: i >= 1 ? 0.5 : 0.38, beads: true, rings: i >= 1, maxK: i >= 1 ? 2 : 1, force: i >= 1 ? 5 : 0, mark: i >= 1 };
   }
   const lam = 2 * 0.008 * R_ / 1000;
   if (phase === 'run') return { P: 0.13, travel: 1.0, lam, beads: true, rings: true, maxK: 3, force: 0, mark: true };
-  return { P: 0.3, travel: 1.8, lam, beads: true, rings: true, maxK: 3, force: 0, mark: forecast };
+  return { P: 0.3, travel: 1.8, lam, beads: true, rings: true, maxK: 3, force: 0, mark: true };
 }
+/* what Mika says of a run: one box */
 function verdict() {
   const o = res.o, j = res.j;
-  if (!j.okRate && j.okCells) return 'Enough cells, but too many doublets. The more cells you load into one lane, the more doublets: about 0.8% per 1,000 cells. Load fewer per lane, and use more lanes.';
+  if (!j.okRate && j.okCells) return 'Enough cells, but too many doublets: about 0.8% for every 1,000 cells in a lane. Load fewer per lane, and use more lanes.';
   if (j.okRate && !j.okCells) return 'Few doublets, but not enough cells. One lane cannot give more at this rate. Use more lanes.';
   if (!j.pass) return 'Too few cells and too many doublets. Load fewer cells per lane, and use more lanes.';
-  if (j.stars === 3) return 'Enough cells, and few doublets. Splitting them across lanes kept the rate down. The ' + G.fmt(o.doublets) + ' doublets you did make stay in the data until room 1-5.';
+  if (j.stars === 3) return 'Enough cells and few doublets: the lanes kept the rate down. The ' + G.fmt(o.doublets) + ' doublets you did make stay in the data until room 1-5.';
   return 'It works, but two lanes would have been enough. Every lane is another kit.';
 }
 function resetStream() { planned = []; cells = []; beads = []; drops = []; lastPlan = now; dblSeen = 0; }
@@ -90,7 +89,6 @@ G.scenes.droplets = {
   enter() {
     rnd = G.rng(42);
     now = 0; R_ = 9000; lanes = 1; sel = 0; rsel = 1; res = null; run = null; landed = 0;
-    forecast = !!G.state.notes['d-rule'];
     if (G.state.load) { R_ = G.state.load.R; lanes = G.state.load.lanes; }
     phase = G.state.rooms.droplets.done || G.state.tries.droplets > 0 ? 'config' : 'intro';
     beats = new G.Beats(BEATS);
@@ -146,7 +144,8 @@ G.scenes.droplets = {
 function startRun() {
   G.state.tries.droplets++; G.save();
   phase = 'run'; resetStream(); landed = 0;
-  run = { t: 0, D: G.reduced ? 1.2 : 6.5, o: compute(R_, lanes) };
+  /* the first run is the one to watch: the ones after it take half the time */
+  run = { t: 0, D: G.reduced ? 1.2 : G.state.tries.droplets > 1 ? 3.2 : 6.5, o: compute(R_, lanes) };
   ['cells', 'rate', 'lanes'].forEach(g => G.book.goal(g, null));
   G.sfx('ok');
 }
@@ -155,7 +154,7 @@ function finish() {
   res = { o, j }; phase = 'result'; rsel = j.pass ? 1 : 0; say = new G.Beats([{ say: verdict() }]);
   G.book.goal('cells', j.okCells); G.book.goal('rate', j.okRate);
   G.book.goal('lanes', j.pass ? (j.stars === 3 ? true : false) : null);
-  G.book.unlock('d-rule'); forecast = true;
+  G.book.unlock('d-rule');
   if (j.pass) G.book.unlock('d-later');
   G.sfx(j.pass ? 'star' : 'bad');
 }
@@ -279,33 +278,36 @@ function drawTally() {
   row(80, 'DOUBLE', t && t.d, C.coral, (ix, iy) => { G.cell(ix - 3, iy - 4, C.coral, 5); G.cell(ix + 1, iy - 1, C.coral, 5); });
 }
 
+/* a meter with its target marked on it: the bar is green on the right side of the mark, and red on the wrong one */
+function meter(y, label, frac, at, ok, value, target) {
+  const x = 70, w = 92, fill = Math.round(w * G.clamp(frac, 0, 1)), mark = x + Math.round(w * at);
+  T(label, 14, y, C.mist);
+  R(x, y + 1, w, 7, C.slate); R(x, y + 1, fill, 7, ok ? C.mint : C.coral); R(x, y + 1, fill, 1, 'rgba(255,255,255,.35)');
+  R(mark, y - 1, 1, 11, C.amber); R(mark - 1, y - 1, 3, 1, C.amber);
+  T(value, 212, y, ok ? C.mint : C.coral, { a: 'right', f: 'smb' });
+  T(target, 222, y, C.amber);
+}
 function drawConfig() {
   R(0, 111, VW, VH - 111, '#0e1630'); R(0, 111, VW, 1, C.slate);
   T('CELLS PER LANE', 14, 116, sel === 0 ? C.white : C.mist);
   R_ = G.slider('load', 104, 119, 110, R_, 1000, 16000, 500, { focus: sel === 0 });
   T(G.fmt(R_), 252, 116, C.cyan, { a: 'right', f: 'smb' });
 
-  T('LANES', 14, 134, sel === 1 ? C.white : C.mist);
-  if (G.button('lm', 104, 131, 13, 13, '-', { disabled: lanes <= 1, focus: false })) { lanes--; sel = 1; }
-  T(String(lanes), 127, 134, C.cyan, { a: 'center', f: 'smb' });
-  if (G.button('lp', 137, 131, 13, 13, '+', { disabled: lanes >= 4 })) { lanes++; sel = 1; }
-  if (sel === 1 && Math.floor(G.t * 3) % 2 === 0) T('>', 96, 134, C.cyan);
-  for (let i = 0; i < 4; i++) { R(160 + i * 13, 132, 10, 11, i < lanes ? C.teal : C.slate); R(162 + i * 13, 134, 6, 2, i < lanes ? C.cyan : C.steel); }
+  T('LANES', 14, 133, sel === 1 ? C.white : C.mist);
+  if (G.button('lm', 104, 129, 17, 15, '-', { disabled: lanes <= 1, focus: false })) { lanes--; sel = 1; }
+  T(String(lanes), 131, 133, C.cyan, { a: 'center', f: 'smb' });
+  if (G.button('lp', 141, 129, 17, 15, '+', { disabled: lanes >= 4 })) { lanes++; sel = 1; }
+  if (sel === 1 && Math.floor(G.t * 3) % 2 === 0) T('>', 96, 133, C.cyan);
+  for (let i = 0; i < 4; i++) { R(168 + i * 13, 131, 10, 11, i < lanes ? C.teal : C.slate); R(170 + i * 13, 133, 6, 2, i < lanes ? C.cyan : C.steel); }
 
   if (G.button('run', 262, 114, 52, 30, 'RUN', { primary: true, focus: sel === 2 })) startRun();
   if (G.ptr.pressed && G.ptr.y > 111) { if (G.ptr.y < 128 && G.ptr.x < 256) sel = 0; }
 
-  if (forecast) {
-    const o = compute(R_, lanes), j = judge(o);
-    T('FORECAST', 14, 151, C.mist);
-    T((o.rate * 100).toFixed(1) + '% DOUBLETS', 104, 151, j.okRate ? C.mint : C.coral);
-    T(G.fmt(o.singlets) + ' SINGLETS', 200, 151, j.okCells ? C.mint : C.coral);
-  } else {
-    T('NO FORECAST YET. RUN THE CHIP AND SEE.', 14, 151, C.steel);
-  }
-  R(0, 163, VW, 1, C.slate);
-  T('GOAL', 14, 167, C.amber, { f: 'smb' });
-  T('8,000 SINGLETS OR MORE.  DOUBLETS 4% OR LESS.', 48, 167, C.amber);
+  /* what this load will give, against what is wanted: both bars green, and the run will pass */
+  const o = compute(R_, lanes), j = judge(o);
+  R(0, 148, VW, 1, C.slate);
+  meter(153, 'SINGLETS', o.singlets / (2 * GOAL_CELLS), 0.5, j.okCells, G.fmt(o.singlets), '8,000 OR MORE');
+  meter(167, 'DOUBLETS', o.rate / (3 * GOAL_RATE), 1 / 3, j.okRate, (o.rate * 100).toFixed(1) + '%', '4% OR LESS');
 }
 
 function drawRun() {
