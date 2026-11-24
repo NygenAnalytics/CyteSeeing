@@ -9,8 +9,9 @@
    values below.
 
    G.track(name, props) is the only way an event leaves the game. The engine tells this file about
-   three things (G.onScene, G.onSave, G.onProject in core.js), and everything about stations and
-   stages is worked out from those, so a new station is counted without a line written for it. */
+   four things (G.onScene, G.onSave, G.onProject in core.js, G.onGoal in book.js), and everything
+   about stations and stages is worked out from those, so a new station is counted without a line
+   written for it. */
 (function () {
 'use strict';
 const CFG = Object.assign({
@@ -98,6 +99,31 @@ const full = (rooms, id) => roomsOf(id).every(r => rooms[r] && rooms[r].done);
 let started = false, floor = null, visit = null, signin = 0, snapKey, snap = {}, tried = {};
 function resnap() { snapKey = (G.profile && G.profile.scenario) || null; snap = copy((G.state && G.state.rooms) || {}); tried = Object.assign({}, (G.state && G.state.tries) || {}); }
 
+/* The goal lights are a station's verdict on an attempt: which goals it met and which it missed.
+   One event each time a light comes on or changes colour; lights going out (a retry) are not a
+   verdict. A station may leave a word about the attempt in G.attempt (the load, the setting that
+   was tried): it goes with the verdict, once. */
+function lit() {
+  const st = (G.book && G.book.states) || {}, on = {};
+  ((G.book && G.book.cfg && G.book.cfg.goals) || []).forEach(g => { if (st[g.id] === true || st[g.id] === false) on[g.id] = st[g.id]; });
+  return on;
+}
+let due = false;
+function judge() {
+  due = false;
+  try {
+    if (!visit || G.scene() !== visit.room) return;
+    const was = visit.lights, on = lit(), ids = Object.keys(on);
+    visit.lights = on;
+    if (!ids.some(i => on[i] !== was[i])) return;
+    G.track('station_result', { room: visit.room, stage: stageOf(visit.room), tries: ((G.state || {}).tries || {})[visit.room] || 0,
+      met: ids.filter(i => on[i]).join(','), missed: ids.filter(i => !on[i]).join(','), attempt: G.attempt || null, seconds: secs(visit.t0) });
+    G.attempt = null;
+  } catch (e) {}
+}
+/* a light has changed: look once the station has finished setting them */
+G.onGoal = function () { if (visit && !due) { due = true; setTimeout(judge, 0); } };
+
 /* a scene has changed: the start of a visit, a station entered or left, a stage walked into */
 G.onScene = function (from, to) {
   try {
@@ -113,7 +139,8 @@ G.onScene = function (from, to) {
     }
     if (stageOf(to)) {
       const r = (G.state.rooms || {})[to] || {};
-      visit = { room: to, t0: now(), done: false, again: !!(r.done && !r.by) };
+      /* lights that are on when the player walks in are not a verdict on anything */
+      visit = { room: to, t0: now(), done: false, again: !!(r.done && !r.by), lights: lit() };
       G.track('station_started', { room: to, stage: stageOf(to), again: visit.again });
     }
     if (to === 'corridor') {

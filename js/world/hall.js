@@ -299,8 +299,10 @@ G.scenes.corridor = {
     if (talk) talk.draw({ top: true });
     if (ask && ask.draw) ask.draw();
     else if (ask) {
-      G.caption(ask.text, 99, { top: true, noPrompt: true, border: C.amber });
-      ask.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: ask.sel === i, primary: i === 1 }) && ask) ask.pick(i); });
+      /* an answer puts the question away: q is still there for the button after it */
+      const q = ask;
+      G.caption(q.text, 99, { top: true, noPrompt: true, border: C.amber });
+      q.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: q.sel === i, primary: i === 1 }) && ask === q) q.pick(i); });
     }
     if (fig) G.drawFigure(fig.id, fig.t);
   },

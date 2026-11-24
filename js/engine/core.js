@@ -673,7 +673,18 @@ function swap() {
   if (G.onScene) G.onScene(from, curName);
 }
 let last = 0;
+/* Whatever goes wrong in a frame, the next one is still drawn and starts with clean input: one
+   mistake in a room must not freeze the game. The error is not swallowed: it still reaches the console. */
 function frame(now) {
+  try { step(now); } finally {
+    Object.keys(hit).forEach(k => { delete hit[k]; });
+    ptr.pressed = false; ptr.released = false;
+    /* a finger that has left the screen is not hovering over anything */
+    if (ptr.lift) { ptr.lift = false; ptr.x = -1; ptr.y = -1; }
+    requestAnimationFrame(frame);
+  }
+}
+function step(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
   G.t += dt; G.dt = dt; G.frame = (G.frame || 0) + 1;
@@ -710,11 +721,6 @@ function frame(now) {
   if (fade > 0) { ctx.globalAlpha = Math.min(1, fade); R(0, 0, VW, VH, C.ink); ctx.globalAlpha = 1; }
   /* only said when a script takes long enough to notice */
   if (next && !next.ready && next.wait > 0.4) T('LOADING' + '.'.repeat(1 + Math.floor(G.t * 3) % 3), VW / 2 - 22, VH / 2 - 4, C.fog);
-  Object.keys(hit).forEach(k => { delete hit[k]; });
-  ptr.pressed = false; ptr.released = false;
-  /* a finger that has left the screen is not hovering over anything */
-  if (ptr.lift) { ptr.lift = false; ptr.x = -1; ptr.y = -1; }
-  requestAnimationFrame(frame);
 }
 G.start = function (first) {
   next = { name: first, args: {} }; swap(); fade = 1; fadeDir = -1;

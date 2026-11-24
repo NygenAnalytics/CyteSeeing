@@ -40,6 +40,7 @@ A playthrough waits fixed times between key presses, so a busy machine can make 
 | `touch-gallery.js` | The same by taps on three phone sizes: a tap on a frame walks to it, and a second tap answers |
 | `done.js` | Not a test: the finished save the gallery tests start from. `done('cortex', { by: ['soup'], owe: ['board'] })` gives one with a step run by Tomo and a room still to do |
 | `turn.js` | An upright phone with the game turned on its side, on two phone sizes: the screen grows and stays inside the window, the thumb pads stand at its ends, a tap lands where the finger is, turning the phone for real hands over to the ordinary sideways layout and back, and UPRIGHT undoes it |
+| `answers.js` | A question with two answers (a parcel label, a stage on the map, a door in a corridor): the left-hand answer by mouse and by finger puts the question away and the game keeps running. It once froze. And a frame that throws is reported, and the next one is drawn all the same |
 | `soak.js` | In and out of every scene and along the Long Gallery for eight rounds, changing project each round: page elements and listeners must not grow, and the heap must settle |
 | `fuzz.js` | Random keys and clicks from a cold start: no errors, and the game keeps running |
 | `fuzz-gallery.js` | The same in the Long Gallery and at its close, which a cold start never reaches: from a finished save with the questions settled, one with a step that Tomo ran, and one whose wall is not full |

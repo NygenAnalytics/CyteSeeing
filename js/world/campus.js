@@ -81,7 +81,7 @@ function goIn(n) {
 }
 
 G.scenes.campus = {
-  dbg: { nodes: () => nodes.map(n => ({ kind: n.kind, id: n.id, open: n.open, name: n.name, x: n.x, y: n.y })), at: () => at, busy: () => !!(talk || ask || way.length), sheet: () => (ask && ask.dbg) || null, to: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; },
+  dbg: { nodes: () => nodes.map(n => ({ kind: n.kind, id: n.id, open: n.open, name: n.name, x: n.x, y: n.y })), at: () => at, busy: () => !!(talk || ask || way.length), asking: () => !!ask, sheet: () => (ask && ask.dbg) || null, to: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; },
     enter: i => { at = i; hx = nodes[i].x; hy = nodes[i].y; way = []; goIn(nodes[i]); }, clear: () => { talk = null; ask = null; } },
   enter(a) {
     if (!G.scenario()) { G.go('corridor', { floor: 'bay' }); nodes = []; way = []; at = 0; return; }
@@ -137,7 +137,12 @@ G.scenes.campus = {
     G.star(VW - 44, 2, true); T(G.totalStars() + '/' + G.maxStars(), VW - 5, 1, C.amber, { a: 'right' });
     if (!talk && !ask && !way.length) prompt(nodes[at]);
     if (ask && ask.draw) ask.draw();
-    else if (ask) { G.caption(ask.text, 99, { top: true, noPrompt: true, border: C.amber }); ask.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: ask.sel === i, primary: i === 1 }) && ask) ask.pick(i); }); }
+    else if (ask) {
+      /* an answer puts the question away: q is still there for the button after it */
+      const q = ask;
+      G.caption(q.text, 99, { top: true, noPrompt: true, border: C.amber });
+      q.opts.forEach((o, i) => { if (G.button('ask' + i, 12 + i * 152, 70, 144, 15, o, { focus: q.sel === i, primary: i === 1 }) && ask === q) q.pick(i); });
+    }
     if (talk) talk.draw();
   },
 };

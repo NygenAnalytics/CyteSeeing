@@ -67,6 +67,10 @@ const INDEX = path.resolve(__dirname, '..', 'index.html'), NAME = 'ZQXJWV';
     console.log('stage_entered', JSON.stringify(((await t.last('stage_entered')) || {}).props && (await t.last('stage_entered')).props.stage));
     await p.evaluate(() => __game.go('droplets', {})); await t.wait(2000);
     console.log('station_started', JSON.stringify((({ room, stage, again }) => ({ room, stage, again }))((await t.last('station_started')).props)));
+    /* the verdict on an attempt is the goal lights: one event each time they are lit afresh, and none for the same lights set again */
+    const lights = async (on, word) => { await p.evaluate(([on, word]) => { const G = __game; if (word) G.attempt = word; ['cells', 'rate', 'lanes'].forEach((g, i) => G.book.goal(g, on[i])); }, [on, word]); await t.wait(120); };
+    await lights([true, false, null], '9000 x 1'); await lights([true, false, null]); await lights([null, null, null]); await lights([true, false, null]); await lights([true, true, false], '3000 x 4');
+    console.log('station_result:', (await t.log()).filter(e => e.name === 'station_result').map(e => e.props.room + ' [' + e.props.met + '] [' + e.props.missed + '] ' + e.props.attempt + ' ' + typeof e.props.seconds).join(' ; '));
     await p.evaluate(() => { const G = __game; G.state.rooms.droplets = { done: true, stars: 2 }; G.state.tries.droplets = 3; G.save(); G.save(); });
     const fin = (await t.log()).filter(e => e.name === 'station_finished');
     console.log('station_finished x' + fin.length, JSON.stringify((({ room, stage, stars, first, tries, seconds }) => ({ room, stage, stars, first, tries, seconds: typeof seconds }))(fin[0].props)), '| rooms_done with it', fin[0].props.rooms_done);

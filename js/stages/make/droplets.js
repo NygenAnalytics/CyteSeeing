@@ -152,6 +152,8 @@ function startRun() {
 function finish() {
   const o = run.o, j = judge(o);
   res = { o, j }; phase = 'result'; rsel = j.pass ? 1 : 0; say = new G.Beats([{ say: verdict() }]);
+  /* for the play statistics: which load this was */
+  G.attempt = o.R + ' x ' + o.lanes;
   G.book.goal('cells', j.okCells); G.book.goal('rate', j.okRate);
   G.book.goal('lanes', j.pass ? (j.stars === 3 ? true : false) : null);
   G.book.unlock('d-rule');

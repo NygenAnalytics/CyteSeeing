@@ -66,7 +66,9 @@ book.unlock = function (id) {
 };
 /* state: true = met, false = missed, null = not judged yet */
 book.goal = function (id, state) {
+  const was = book.states[id];
   book.states[id] = state;
+  if (was !== state && G.onGoal) G.onGoal();
   const li = document.querySelector('[data-g="' + id + '"]');
   if (!li) return;
   li.classList.toggle('done', state === true);
