@@ -34,7 +34,10 @@ let phase, beats, pt, cells, ghosts, thr, res, rsel, lastSync, rate, nd, hist, t
 function build() {
   const ld = G.state.load;
   rate = ld ? ld.rate : 0.036;
-  const rnd = G.rng(51 + Math.round(rate * 1000));
+  /* The room is laid out from the rate in steps of 0.4%: six layouts, and a load of 2,250 or 3,333 cells in a lane gets
+     the nearest of them. Two of the six could not be won with three stars at any cut-off (tests: sweep()), so those
+     two have a seed of their own. */
+  const k = Math.round(rate * 250), rnd = G.rng({ 5: 275, 8: 222 }[k] || 51 + 4 * k);
   const gauss = () => { let u = 0; for (let i = 0; i < 6; i++) u += rnd(); return (u - 3) / 0.7071; };
   const c = [];
   CL.forEach((k, ci) => { for (let i = 0; i < k.n; i++) c.push({ x: k.x + gauss() * k.sd, y: k.y + gauss() * k.sd, kind: 's', from: ci }); });

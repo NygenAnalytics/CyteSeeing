@@ -6,7 +6,8 @@ const open = require('./lib.js');
   await at(820); await key('Space'); await wait(400); await shot('a_locked'); await key('Space'); await wait(200);
   await door(292, 'droplets'); await wait(300); await until('droplets', 'config', 'droplets brief', true); await wait(200); await shot('d_config');
   await key('Space'); await wait(7600); await shot('d_verdict'); await talk('droplets fail'); await wait(200); await shot('d_result1');
-  await key('Space'); await wait(300); await key('ArrowLeft', 9); await key('ArrowDown'); await key('ArrowRight'); await key('ArrowDown'); await key('Space'); await wait(7600); await talk('droplets pass'); await shot('d_result2'); await key('Space'); await wait(1400); await shot('a_next');
+  /* too many doublets: back at the desk the marker stands on the lanes, and one more lane shares the load */
+  await key('Space'); await wait(300); await key('ArrowRight'); await key('ArrowDown'); await key('Space'); await wait(7600); await talk('droplets pass'); await shot('d_result2'); await key('Space'); await wait(1400); await shot('a_next');
   await door(496, 'cliff'); await wait(300); await until('cliff', 'cut', 'cliff brief', true); await wait(200); await shot('c_cut'); await key('Space'); await wait(600);
   await talk('cliff cutres', true); await wait(200); await key('Space'); await wait(500); await talk('cliff test brief', true); await wait(200); await shot('c_test');
   await key('Space'); await wait(5200); await talk('cliff pass', true); await shot('c_result'); console.log('cliff', await ph('cliff')); await key('Space'); await wait(1400);

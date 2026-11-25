@@ -96,6 +96,13 @@ const INDEX = path.resolve(__dirname, '..', 'index.html'), NAME = 'ZQXJWV';
     const after = (await t.log()).slice(before).map(e => e.name);
     console.log('another parcel:', after.join(' ') || 'nothing', '| from', ((await t.last('project_chosen')) || { props: {} }).props.from);
 
+    /* a fault in the game's own scripts is written down, three at most; one from anywhere else is not */
+    await p.evaluate(() => {
+      const base = location.href.split('index.html')[0], err = (file, n) => window.dispatchEvent(new ErrorEvent('error', { message: 'x is not defined', filename: file, lineno: n }));
+      err('chrome-extension://abc/content.js', 1); err(base + 'js/world/hall.js?v=9', 12); err(base + 'js/world/hall.js', 13); err(base + 'js/engine/core.js', 14); err(base + 'js/engine/core.js', 15);
+    });
+    const faults = (await t.log()).filter(e => e.name === 'game_error');
+    console.log('game_error x' + faults.length, faults.map(e => e.props.at + ' "' + e.props.message + '" in ' + e.props.scene).join(' ; '));
     const all = await t.log(), text = JSON.stringify(all), need = ['project', 'rooms_done', 'stars', 'touch', 'game_version'];
     console.log('events', all.length, '| every one carries', need.join(', ') + ':', all.every(e => need.every(k => k in e.props)));
     console.log('the name in any event:', text.indexOf(NAME) >= 0, '| requests to PostHog:', out.length, '| cookies:', (await ctx.cookies()).length,

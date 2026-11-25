@@ -1,18 +1,20 @@
 /* Room 1-1, the droplet bay. A microfluidic chip: cells and barcoded beads meet, oil pinches
-   them into droplets. The player sets how many cells to load and across how many lanes.
+   them into droplets. The player sets how many cells to load, and how many lanes share them:
+   a lane more, and every lane carries less. That is the whole lesson of the room, so the lanes
+   split the load and do not add to it.
    Rule of thumb used here: about 0.8% doublets per 1,000 cells recovered on a standard chip. */
 (function () {
 'use strict';
 const { R, T, C, VW, VH } = G;
 
-const GOAL_CELLS = 8000, GOAL_RATE = 0.04;
+const GOAL_CELLS = 8000, GOAL_RATE = 0.04, MIN = 2000, MAX = 20000, STEP = 1000;
 const JX = 126, CY = 62, EXIT_X = 236, TUBE_X = 250;
 
 /* Mika's walk through the chip, in three boxes. The animation on screen follows the step: see stream(). */
 const BEATS = [
   { say: 'Your cells flow into the chip from the left, one by one. Gel beads come in from the top, each with its own barcode.' },
   { say: 'Oil pinches the stream into droplets. One cell with one bead gets one barcode. Two cells in one droplet is a doublet.' },
-  { spot: [0, 111, VW, 69], say: 'Collect 8,000 single cells, with 4% doublets or fewer. Set the cells per lane and the number of lanes, then press RUN.' },
+  { spot: [0, 111, VW, 69], say: 'Collect 8,000 single cells, with 4% doublets or fewer. Set the load and the lanes that share it, then press RUN.' },
 ];
 
 const POKE = [
@@ -23,8 +25,10 @@ const POKE = [
   { r: [238, 40, 24, 68], say: ['TUBE: DO NOT DROP. NO, SERIOUSLY.', 'TUBE: A WEEK OF WORK IN 100 MICROLITRES.'] },
 ];
 let pokeN = 0;
-let phase, beats, now, R_, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, rsel, dblSeen, say;
+let phase, beats, now, total, lanes, sel, planned, lastPlan, cells, beads, drops, landed, run, res, rnd, rsel, dblSeen, say;
 
+/* what one lane carries: the load, shared between the lanes */
+const each = () => Math.round(total / lanes);
 function compute(r, n) {
   const d = 0.008 * r / 1000, dbl = Math.round(r * d), lam = 2 * d;
   const empties = Math.round(r / (1 - Math.exp(-lam)) - r);
@@ -42,16 +46,16 @@ function stream() {
     const i = beats.i;
     return { P: 0.62, travel: 2.6, lam: i >= 1 ? 0.5 : 0.38, beads: true, rings: i >= 1, maxK: i >= 1 ? 2 : 1, force: i >= 1 ? 5 : 0, mark: i >= 1 };
   }
-  const lam = 2 * 0.008 * R_ / 1000;
+  const lam = 2 * 0.008 * each() / 1000;
   if (phase === 'run') return { P: 0.13, travel: 1.0, lam, beads: true, rings: true, maxK: 3, force: 0, mark: true };
   return { P: 0.3, travel: 1.8, lam, beads: true, rings: true, maxK: 3, force: 0, mark: true };
 }
 /* what Mika says of a run: one box */
 function verdict() {
   const o = res.o, j = res.j;
-  if (!j.okRate && j.okCells) return 'Enough cells, but too many doublets: about 0.8% for every 1,000 cells in a lane. Load fewer per lane, and use more lanes.';
-  if (j.okRate && !j.okCells) return 'Few doublets, but not enough cells. One lane cannot give more at this rate. Use more lanes.';
-  if (!j.pass) return 'Too few cells and too many doublets. Load fewer cells per lane, and use more lanes.';
+  if (!j.okRate && j.okCells) return 'Enough cells, but too many doublets: about 0.8% for every 1,000 cells in a lane. Share the load between more lanes.';
+  if (j.okRate && !j.okCells) return 'Few doublets, but not enough cells. Load more. If the doublets climb, share the load between more lanes.';
+  if (!j.pass) return 'Too few cells and too many doublets. Load more cells, and share them between more lanes.';
   if (j.stars === 3) return 'Enough cells and few doublets: the lanes kept the rate down. The ' + G.fmt(o.doublets) + ' doublets you did make stay in the data until room 1-5.';
   return 'It works, but two lanes would have been enough. Every lane is another kit.';
 }
@@ -67,7 +71,7 @@ function showBook() {
     ],
     notes: [
       { id: 'd-bead', open: true, html: 'A droplet needs <b>one bead and one cell</b>. Beads are packed so most droplets get one. Cells are dilute, so most droplets get none.' },
-      { id: 'd-rule', html: 'Rule of thumb on a standard 10x chip: about <b>0.8% doublets per 1,000 cells recovered</b>. 10,000 cells means about 8%. The rate is set by how many cells you load, not by the instrument.' },
+      { id: 'd-rule', html: 'Rule of thumb on a standard 10x chip: about <b>0.8% doublets per 1,000 cells recovered</b>. 10,000 cells in one lane means about 8%. The rate is set by how many cells go into a lane, not by the instrument: the same cells over two lanes give half the rate.' },
       { id: 'd-later', html: 'Doublets that get through are found later, in code, with tools such as <b>scDblFinder</b> or <b>Scrublet</b>. Run them on each lane by itself, never on lanes pooled together.' },
     ],
     term: {
@@ -86,10 +90,13 @@ function showBook() {
 
 G.scenes.droplets = {
   phase: () => phase,
+  /* for the tests: what the desk is set to */
+  dbg: { load: () => G.fmt(total) + ' over ' + lanes + ': ' + G.fmt(each()) + ' per lane' },
   enter() {
     rnd = G.rng(42);
-    now = 0; R_ = 9000; lanes = 1; sel = 0; rsel = 1; res = null; run = null; landed = 0;
-    if (G.state.load) { R_ = G.state.load.R; lanes = G.state.load.lanes; }
+    now = 0; total = 9000; lanes = 1; sel = 0; rsel = 1; res = null; run = null; landed = 0;
+    /* the load that was kept: R is what one lane carried */
+    if (G.state.load) { lanes = G.clamp(G.state.load.lanes, 1, 4); total = G.clamp(Math.round(G.state.load.R * lanes / STEP) * STEP, MIN, MAX); }
     phase = G.state.rooms.droplets.done || G.state.tries.droplets > 0 ? 'config' : 'intro';
     beats = new G.Beats(BEATS);
     resetStream();
@@ -109,7 +116,7 @@ G.scenes.droplets = {
       if (G.hit('up')) sel = (sel + 2) % 3;
       if (G.hit('down')) sel = (sel + 1) % 3;
       const step = (G.rep('right') ? 1 : 0) - (G.rep('left') ? 1 : 0);
-      if (step && sel === 0) { R_ = G.clamp(R_ + step * 500, 1000, 16000); G.sfx('tick'); }
+      if (step && sel === 0) { total = G.clamp(total + step * STEP, MIN, MAX); G.sfx('tick'); }
       if (step && sel === 1 && G.hit(step > 0 ? 'right' : 'left')) { lanes = G.clamp(lanes + step, 1, 4); G.sfx('tick'); }
       if (G.hit('a')) startRun();
       if (G.ptr.pressed && G.ptr.y < 110) {
@@ -145,7 +152,7 @@ function startRun() {
   G.state.tries.droplets++; G.save();
   phase = 'run'; resetStream(); landed = 0;
   /* the first run is the one to watch: the ones after it take half the time */
-  run = { t: 0, D: G.reduced ? 1.2 : G.state.tries.droplets > 1 ? 3.2 : 6.5, o: compute(R_, lanes) };
+  run = { t: 0, D: G.reduced ? 1.2 : G.state.tries.droplets > 1 ? 3.2 : 6.5, o: compute(each(), lanes) };
   ['cells', 'rate', 'lanes'].forEach(g => G.book.goal(g, null));
   G.sfx('ok');
 }
@@ -160,7 +167,8 @@ function finish() {
   if (j.pass) G.book.unlock('d-later');
   G.sfx(j.pass ? 'star' : 'bad');
 }
-function retry() { phase = 'config'; res = null; resetStream(); landed = 0; sel = 0; }
+/* back at the desk, the marker stands at the control that mends what went wrong: the lanes for too many doublets, the load for too few cells */
+function retry() { sel = res && !res.j.pass ? (res.j.okRate ? 0 : 1) : 0; phase = 'config'; res = null; resetStream(); landed = 0; }
 function keep() {
   const s = G.state, o = res.o;
   s.load = { R: o.R, lanes: o.lanes, singlets: o.singlets, doublets: o.doublets, rate: o.rate };
@@ -291,22 +299,23 @@ function meter(y, label, frac, at, ok, value, target) {
 }
 function drawConfig() {
   R(0, 111, VW, VH - 111, '#0e1630'); R(0, 111, VW, 1, C.slate);
-  T('CELLS PER LANE', 14, 116, sel === 0 ? C.white : C.mist);
-  R_ = G.slider('load', 104, 119, 110, R_, 1000, 16000, 500, { focus: sel === 0 });
-  T(G.fmt(R_), 252, 116, C.cyan, { a: 'right', f: 'smb' });
+  T('CELLS TO LOAD', 14, 116, sel === 0 ? C.white : C.mist);
+  total = G.slider('load', 104, 119, 106, total, MIN, MAX, STEP, { focus: sel === 0 });
+  T(G.fmt(total), 257, 116, C.cyan, { a: 'right', f: 'smb' });
 
   T('LANES', 14, 133, sel === 1 ? C.white : C.mist);
   if (G.button('lm', 104, 129, 17, 15, '-', { disabled: lanes <= 1, focus: false })) { lanes--; sel = 1; }
   T(String(lanes), 131, 133, C.cyan, { a: 'center', f: 'smb' });
-  if (G.button('lp', 141, 129, 17, 15, '+', { disabled: lanes >= 4 })) { lanes++; sel = 1; }
+  if (G.button('lp', 141, 129, 17, 15, '+', { disabled: lanes >= 4, focus: sel === 1 })) { lanes++; sel = 1; }
   if (sel === 1 && Math.floor(G.t * 3) % 2 === 0) T('>', 96, 133, C.cyan);
-  for (let i = 0; i < 4; i++) { R(168 + i * 13, 131, 10, 11, i < lanes ? C.teal : C.slate); R(170 + i * 13, 133, 6, 2, i < lanes ? C.cyan : C.steel); }
+  /* what each lane carries: it falls as the lanes go up, and the doublets with it */
+  T(G.fmt(each()), 166, 133, C.cyan, { f: 'smb' }); T('PER LANE', 166 + Math.ceil(G.tw(G.fmt(each()), 'smb')) + 5, 133, C.mist);
 
   if (G.button('run', 262, 114, 52, 30, 'RUN', { primary: true, focus: sel === 2 })) startRun();
-  if (G.ptr.pressed && G.ptr.y > 111) { if (G.ptr.y < 128 && G.ptr.x < 256) sel = 0; }
+  if (G.ptr.pressed && G.ptr.y > 111) { if (G.ptr.y < 128 && G.ptr.x < 260) sel = 0; }
 
   /* what this load will give, against what is wanted: both bars green, and the run will pass */
-  const o = compute(R_, lanes), j = judge(o);
+  const o = compute(each(), lanes), j = judge(o);
   R(0, 148, VW, 1, C.slate);
   meter(153, 'SINGLETS', o.singlets / (2 * GOAL_CELLS), 0.5, j.okCells, G.fmt(o.singlets), '8,000 OR MORE');
   meter(167, 'DOUBLETS', o.rate / (3 * GOAL_RATE), 1 / 3, j.okRate, (o.rate * 100).toFixed(1) + '%', '4% OR LESS');
@@ -318,7 +327,7 @@ function drawRun() {
   T('RUNNING LANE ' + lane + ' OF ' + lanes, 14, 120, C.white, { f: 'smb' });
   R(14, 136, 240, 7, C.slate); R(14, 136, Math.round(240 * f), 7, C.cyan);
   for (let i = 1; i < lanes; i++) R(14 + Math.round(240 * i / lanes), 134, 1, 11, C.ink);
-  T(G.fmt(R_) + ' CELLS PER LANE', 14, 150, C.mist);
+  T(G.fmt(run.o.R) + ' CELLS PER LANE', 14, 150, C.mist);
   T(G.kt('SPACE: SKIP', 'TAP: SKIP'), 306, 167, C.steel, { a: 'right' });
 }
 

@@ -36,7 +36,9 @@ const { chromium, devices } = require('playwright');
     if (!full) { await ctx.close(); return; }
     // 1-1
     await door(292, 'droplets'); await tapUntil('droplets', 'config');
-    await tap(104 + 110 * (4500 - 1000) / 15000, 120); await tap(143, 137); await wait(200);
+    /* the load by a tap on the slider (9,000 cells), and a second lane to share it */
+    await tap(104 + 106 * (9000 - 2000) / 18000, 120); await tap(149, 137); await wait(200);
+    console.log(name, '1-1 load', await p.evaluate(() => __game.scenes.droplets.dbg.load()));
     await p.screenshot({ path: `${outDir}/t_${name}_droplets.png` });
     await tap(288, 129); await wait(900); await tap(160, 60); await wait(600); console.log(name, '1-1', await ph('droplets'));
     await tap(205, 163); await wait(1300);

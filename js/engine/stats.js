@@ -192,4 +192,18 @@ const listen = (id, fn) => { const el = document.getElementById(id); if (el) el.
 listen('term-langs', e => { const b = e.target.closest('[data-lang]'); if (b) G.track('code_tab_opened', { room: where(), tool: (b.textContent || '').trim(), tool_id: b.getAttribute('data-lang') }); });
 listen('btn-copy', () => G.track('methods_copied', { room: where() }));
 listen('link-repo', () => G.track('github_opened', { from: 'page' }));
+
+/* Something in the game broke: the message, and the file and line it came from. Only the game's own scripts, and three
+   at most for a page load. A fault that stops the game stops the counting with it, so without this it is never seen. */
+let faults = 0;
+function fault(message, at) {
+  if (faults >= 3) return;
+  faults++;
+  G.track('game_error', { message: String(message || '').slice(0, 160), at, scene: where() });
+}
+const own = file => { const m = /\/(js\/[^?#]+)/.exec(String(file || '')); return m ? m[1] : null; };
+window.addEventListener('error', e => { try { const f = own(e.filename); if (f) fault(e.message, f + ':' + (e.lineno || 0)); } catch (x) {} });
+window.addEventListener('unhandledrejection', e => {
+  try { const r = e.reason || {}, m = /\/(js\/[^?#:]+)[^:]*:(\d+)/.exec(String(r.stack || '')); if (m) fault(r.message || r, m[1] + ':' + m[2]); } catch (x) {}
+});
 })();
