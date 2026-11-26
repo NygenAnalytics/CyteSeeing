@@ -37,6 +37,11 @@ const QUICK = [
   T('answers', 'answers.js', { limit: 200, not: [/clock moves false/, /question away false/, /asked false/, /label false/, /read again false/],
     want: [/desk parcel: read again true \| taken response \| scene campus/, /desk map: asked true \| DO IT MYSELF: clock moves true \| question away true \| scene campus/,
       /phone door: asked true \| DO IT MYSELF: clock moves true \| question away true \| scene corridor \| steps Tomo did 0/, /a frame that throws: reported 1 \| clock moves true/] }),
+  /* Restart game from the map, a stage hall and a station: the title at once and no error. And a click on a button or a
+     code tab of the page hands the keyboard back to the game */
+  T('restart', 'restart.js', { limit: 200, not: [/clock moves false/, /errors [1-9]/, /walked false/],
+    want: [/restart from the map: scene title \| project none/, /restart from a stage hall: scene title/, /restart from a station: scene title/, /a new game: scene corridor \| floor bay/,
+      /after a click on SOUND: keys go to screen \| walked true/, /after a click on a code tab \(\d+\): keys go to screen/, /SOUND pressed from the keyboard: keys stay on btn-sound/] }),
   T('turn', 'turn.js', { limit: 200, not: [/turned false \| screen \d+ x \d+ \(/, /label up false/, /inside the window false/, /page scrolls true/],
     want: [/iphone turned true \| screen 533 x 300 .* pads at both ends, 48 px across \| pads inside the window true/, /pixel turned true \| screen 610 x 343 .* pads at both ends, 64 px across/,
       /iphone a tap on TAKE THIS PROJECT: response \| scene campus/, /pixel pad, right arrow: on the map from plot 1 to 2/,

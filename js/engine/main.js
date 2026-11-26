@@ -85,7 +85,7 @@ reset.addEventListener('click', () => {
   /* two clicks, because this wipes the save */
   if (Date.now() - armed < 4000) {
     armed = 0; reset.textContent = 'Restart game';
-    G.resetSave(); G.go('title');
+    G.restart();
   } else { armed = Date.now(); reset.textContent = 'Click again to wipe'; setTimeout(() => { if (armed) { armed = 0; reset.textContent = 'Restart game'; } }, 4000); }
 });
 

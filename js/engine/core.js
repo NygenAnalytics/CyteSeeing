@@ -308,6 +308,13 @@ window.addEventListener('keydown', e => {
   if (!down[k]) hit[k] = true;
   down[k] = true;
 });
+/* A click on a button, a code tab or a link of the page leaves the keyboard on it, and the game deaf: the next Space
+   would press that button again. A click made with a pointer hands the keyboard back to the game. One made from the
+   keyboard (detail 0) stays where it is, and so does anything that is typed into. */
+document.addEventListener('click', e => {
+  const el = e.detail && e.target.closest && e.target.closest('button, a, [role="tab"]');
+  if (el && el !== cv) cv.focus({ preventScroll: true });
+});
 window.addEventListener('keyup', e => {
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   const k = KEYMAP[key];
@@ -661,6 +668,12 @@ G.go = function (name, args) {
     next.ready = false; const mine = next;
     wait.then(() => { mine.ready = true; }, () => { if (next === mine) { next = null; fadeDir = -1; } G.toast('THAT DID NOT LOAD. CHECK THE CONNECTION AND TRY AGAIN.', 5); });
   }
+};
+/* Wipe the save and stand at the title, at once. The scene that was showing lived on the project that has just gone:
+   one more frame of it would be drawn on nothing, and a change of scene already under way would have kept it there. */
+G.restart = function () {
+  G.resetSave();
+  next = { name: 'title', args: {} }; swap(); fade = 1; fadeDir = -1;
 };
 function swap() {
   if (cur && cur.leave) cur.leave();
