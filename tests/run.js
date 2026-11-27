@@ -42,6 +42,12 @@ const QUICK = [
   T('restart', 'restart.js', { limit: 200, not: [/clock moves false/, /errors [1-9]/, /walked false/],
     want: [/restart from the map: scene title \| project none/, /restart from a stage hall: scene title/, /restart from a station: scene title/, /a new game: scene corridor \| floor bay/,
       /after a click on SOUND: keys go to screen \| walked true/, /after a click on a code tab \(\d+\): keys go to screen/, /SOUND pressed from the keyboard: keys stay on btn-sound/] }),
+  /* the page around the game: the tab icon, and the tags and the picture behind a shared link */
+  T('page', 'page.js', { url: true, limit: 120, not: [/ false\b/, /asked of other sites [1-9]/],
+    want: [/canonical https:\/\/docs\.nygen\.io\/CyteSeeing\/ \| og:url https:\/\/docs\.nygen\.io\/CyteSeeing\/ \| type website \| site Nygen Docs/,
+      /og:image https:\/\/docs\.nygen\.io\/CyteSeeing\/preview\.png image\/png 1200x630/, /preview\.png in the repository 1200x630 \| as the tags say true/,
+      /twitter summary_large_image @NygenAnalytics/, /icons \S+nygen-symbol\.ico any ; \S+nygen-symbol\.svg image\/svg\+xml/, /preview\.png served 200 \| same bytes true \| in the Pages workflow: watched true copied true/,
+      /scene droplets \| asked of other sites 0/] }),
   T('turn', 'turn.js', { limit: 200, not: [/turned false \| screen \d+ x \d+ \(/, /label up false/, /inside the window false/, /page scrolls true/],
     want: [/iphone turned true \| screen 533 x 300 .* pads at both ends, 48 px across \| pads inside the window true/, /pixel turned true \| screen 610 x 343 .* pads at both ends, 64 px across/,
       /iphone a tap on TAKE THIS PROJECT: response \| scene campus/, /pixel pad, right arrow: on the map from plot 1 to 2/,

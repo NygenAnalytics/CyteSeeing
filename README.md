@@ -144,6 +144,7 @@ Plain HTML, CSS and JavaScript. Classic scripts, no modules, no dependencies. Al
 | Path | What it holds |
 | --- | --- |
 | `index.html` | The page: the screen, the notebook and the terminal. It loads the engine and the world only |
+| `preview.png` | The picture shown when a link to the game is shared, named in the head of `index.html`. A real screen on a card: `node tests/card.js "$PWD/index.html" preview.png` makes it again |
 | `js/engine/` | `core.js`: canvas, palette, pixel helpers, input, sound, saves, scenes, speech boxes, the main loop. `book.js`: the notebook and terminal panel. `loader.js`: fetches a stage's scripts when the player walks in. `stats.js`: the play statistics, see below. `fonts.js`, `main.js` |
 | `js/scenarios.js` | The registry: every stage (its stations, the scripts it needs) and every project (its cell system and its route) |
 | `js/world/` | `title.js`, `start.js` (the badge printer: a name of your own), `bay.js` (choosing a project), `campus.js` (the map), `hall.js` (walking a hall: what every hall shares), `requests.js` (the request sheet), `figures.js` |
